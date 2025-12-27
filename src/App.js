@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Calculator } from 'lucide-react';
 import './App.css';
 import BudgetCalculator from './components/BudgetCalculator';
 import SavingsCalculator from './components/SavingsCalculator';
@@ -12,11 +11,49 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <div className="header-content">
-          <Calculator size={40} className="header-icon" />
-          <h1>Complete Financial Calculator</h1>
+        <div className="marquee-container">
+          <div className="marquee-content">
+            <span>💰 Complete Financial Calculator</span>
+            <span>•</span>
+            <span>📊 Budget Tracking</span>
+            <span>•</span>
+            <span>💵 Savings Management</span>
+            <span>•</span>
+            <span>💸 Expense Analytics</span>
+            <span>•</span>
+            <span>📁 File Attachments</span>
+            <span>•</span>
+            <span>📈 Beautiful Charts</span>
+            <span>•</span>
+            <span>📊 Excel Export</span>
+            <span>•</span>
+            <span>🔍 Advanced Filtering</span>
+            <span>•</span>
+            <span>💾 100% Local Storage</span>
+            <span>•</span>
+            <span>🔒 Secure & Private</span>
+            <span>•</span>
+            <span>💰 Complete Financial Calculator</span>
+            <span>•</span>
+            <span>📊 Budget Tracking</span>
+            <span>•</span>
+            <span>💵 Savings Management</span>
+            <span>•</span>
+            <span>💸 Expense Analytics</span>
+            <span>•</span>
+            <span>📁 File Attachments</span>
+            <span>•</span>
+            <span>📈 Beautiful Charts</span>
+            <span>•</span>
+            <span>📊 Excel Export</span>
+            <span>•</span>
+            <span>🔍 Advanced Filtering</span>
+            <span>•</span>
+            <span>💾 100% Local Storage</span>
+            <span>•</span>
+            <span>🔒 Secure & Private</span>
+          </div>
         </div>
-        <p>Budget • Savings • Expenses</p>
       </header>
       <div className="main-container">
         <div className="left-panel">
