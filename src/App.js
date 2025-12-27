@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Calculator } from 'lucide-react';
 import './App.css';
 import BudgetCalculator from './components/BudgetCalculator';
 import SavingsCalculator from './components/SavingsCalculator';
@@ -11,15 +12,26 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>💰 Complete Financial Calculator</h1>
+        <div className="header-content">
+          <Calculator size={40} className="header-icon" />
+          <h1>Complete Financial Calculator</h1>
+        </div>
         <p>Budget • Savings • Expenses with Beautiful Analytics</p>
       </header>
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="container">
-        {activeTab === 'budget' && <BudgetCalculator />}
-        {activeTab === 'savings' && <SavingsCalculator />}
-        {activeTab === 'expense' && <ExpenseCalculator />}
+        <div className="main-layout">
+          <div className="left-panel">
+            {activeTab === 'budget' && <BudgetCalculator />}
+            {activeTab === 'savings' && <SavingsCalculator />}
+            {activeTab === 'expense' && <ExpenseCalculator />}
+          </div>
+        </div>
       </div>
+      <footer className="App-footer">
+        <p>&copy; 2024 Budget Calculator. All rights reserved.</p>
+        <p>Your financial data is stored locally and securely on your device.</p>
+      </footer>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { Trash2 } from 'lucide-react';
 import { db } from '../utils/database';
+import TableView from './TableView';
+import DateRangePicker from './DateRangePicker';
 import './SavingsCalculator.css';
 
 const SavingsCalculator = () => {
@@ -13,6 +16,9 @@ const SavingsCalculator = () => {
     interestRate: ''
   });
   const [loading, setLoading] = useState(true);
+  const [savingsView, setSavingsView] = useState('list');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     loadSavings();
@@ -138,7 +144,7 @@ const SavingsCalculator = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Current Amount ($)</label>
+                <label>Current Amount (€)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -149,7 +155,7 @@ const SavingsCalculator = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Target Amount ($)</label>
+                <label>Target Amount (€)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -160,7 +166,7 @@ const SavingsCalculator = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Monthly Contribution ($)</label>
+                <label>Monthly Contribution (€)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -192,15 +198,15 @@ const SavingsCalculator = () => {
             <div className="summary-stats">
               <div className="stat-item">
                 <div className="stat-label">Total Current Savings</div>
-                <div className="stat-value positive">${totalSavings.toFixed(2)}</div>
+                <div className="stat-value positive">€{totalSavings.toFixed(2)}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-label">Total Target</div>
-                <div className="stat-value">${totalTarget.toFixed(2)}</div>
+                <div className="stat-value">€{totalTarget.toFixed(2)}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-label">Remaining to Save</div>
-                <div className="stat-value negative">${(totalTarget - totalSavings).toFixed(2)}</div>
+                <div className="stat-value negative">€{(totalTarget - totalSavings).toFixed(2)}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-label">Progress</div>
@@ -213,104 +219,88 @@ const SavingsCalculator = () => {
         </div>
       </div>
 
-      {savingsProjections.length > 0 && (
-        <div className="savings-charts-section">
-          <div className="chart-card">
-            <h3>Savings Progress</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={progressData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
-                <Legend />
-                <Bar dataKey="current" fill="#10b981" name="Current" />
-                <Bar dataKey="target" fill="#667eea" name="Target" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {savingsProjections.map(saving => (
-            <div key={saving.id} className="chart-card">
-              <h3>{saving.goal} - Projection</h3>
-              <div className="projection-info">
-                <p><strong>Months to Goal:</strong> {saving.projection.monthsToGoal}</p>
-                <p><strong>Final Amount:</strong> ${saving.projection.finalAmount.toFixed(2)}</p>
-              </div>
-              {saving.projection.projection.length > 0 && (
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={saving.projection.projection}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
-                    <Area type="monotone" dataKey="amount" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
-                    <Line type="monotone" dataKey="target" stroke="#667eea" strokeWidth={2} strokeDasharray="5 5" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
       <div className="savings-list-section">
-        <div className="savings-list-card">
-          <h2>Your Savings Goals</h2>
-          {savings.length === 0 ? (
-            <div className="empty-state">No savings goals yet. Add one above!</div>
-          ) : (
-            <div className="savings-list">
-              {savings.map(saving => {
-                const projection = calculateSavingsProjection(saving);
-                const progress = (saving.currentAmount / saving.targetAmount) * 100;
-                return (
-                  <div key={saving.id} className="savings-item">
-                    <div className="savings-header">
-                      <h3>{saving.goal}</h3>
-                      <button
-                        className="delete-btn"
-                        onClick={() => {
-                          if (window.confirm('Delete this savings goal?')) {
-                            deleteSavingsGoal(saving.id);
-                          }
-                        }}
-                      >
-                        Delete
-                      </button>
+        <TableView
+          title="Your Savings Goals"
+          data={savings.map(saving => {
+            const projection = calculateSavingsProjection(saving);
+            const progress = (saving.currentAmount / saving.targetAmount) * 100;
+            return {
+              ...saving,
+              projection,
+              progress
+            };
+          })}
+          columns={[
+            { key: 'goal', header: 'Goal' },
+            { key: 'currentAmount', header: 'Current (€)', render: (val) => `€${val.toFixed(2)}` },
+            { key: 'targetAmount', header: 'Target (€)', render: (val) => `€${val.toFixed(2)}` },
+            { key: 'monthlyContribution', header: 'Monthly (€)', render: (val) => `€${val.toFixed(2)}` },
+            { key: 'interestRate', header: 'Interest (%)', render: (val) => `${val || 0}%` },
+            { key: 'projection', header: 'Months to Goal', render: (val) => val.monthsToGoal },
+            { key: 'progress', header: 'Progress (%)', render: (val) => `${val.toFixed(1)}%` },
+            {
+              key: 'id',
+              header: 'Actions',
+              render: (val) => (
+                <button
+                  className="delete-btn-table"
+                  onClick={() => {
+                    if (window.confirm('Delete this savings goal?')) {
+                      deleteSavingsGoal(val);
+                    }
+                  }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )
+            }
+          ]}
+          viewType={savingsView}
+          onViewChange={setSavingsView}
+          emptyMessage="No savings goals yet. Add one above!"
+          chartContent={
+            savingsView === 'chart' && savingsProjections.length > 0 ? (
+              <div className="savings-charts-in-table">
+                <div className="chart-card">
+                  <h3>Savings Progress</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={progressData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                      <Legend />
+                      <Bar dataKey="current" fill="#10b981" name="Current" />
+                      <Bar dataKey="target" fill="#667eea" name="Target" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {savingsProjections.map(saving => (
+                  <div key={saving.id} className="chart-card">
+                    <h3>{saving.goal} - Projection</h3>
+                    <div className="projection-info">
+                      <p><strong>Months to Goal:</strong> {saving.projection.monthsToGoal}</p>
+                      <p><strong>Final Amount:</strong> €{saving.projection.finalAmount.toFixed(2)}</p>
                     </div>
-                    <div className="savings-details">
-                      <div className="detail-item">
-                        <span className="detail-label">Current:</span>
-                        <span className="detail-value">${saving.currentAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Target:</span>
-                        <span className="detail-value">${saving.targetAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Monthly:</span>
-                        <span className="detail-value">${saving.monthlyContribution.toFixed(2)}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Interest:</span>
-                        <span className="detail-value">{saving.interestRate || 0}%</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Months to Goal:</span>
-                        <span className="detail-value">{projection.monthsToGoal}</span>
-                      </div>
-                    </div>
-                    <div className="progress-bar-container">
-                      <div className="progress-bar" style={{ width: `${Math.min(progress, 100)}%` }}></div>
-                      <span className="progress-text">{progress.toFixed(1)}%</span>
-                    </div>
+                    {saving.projection.projection.length > 0 && (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <AreaChart data={saving.projection.projection}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                          <Area type="monotone" dataKey="amount" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
+                          <Line type="monotone" dataKey="target" stroke="#667eea" strokeWidth={2} strokeDasharray="5 5" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            ) : null
+          }
+        />
       </div>
     </div>
   );

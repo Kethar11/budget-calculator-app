@@ -2,30 +2,78 @@
   min-height: 100vh;
   padding: 20px;
   padding-bottom: 40px;
+  background: #f5f7fa;
 }
 
 .App-header {
   text-align: center;
+  color: #2d3748;
+  margin-bottom: 40px;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+  margin-left: -20px;
+  margin-right: -20px;
+  margin-top: -20px;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.header-icon {
   color: white;
-  margin-bottom: 30px;
 }
 
 .App-header h1 {
-  font-size: 2.8rem;
-  margin-bottom: 10px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-  font-weight: 700;
+  font-size: 2.5rem;
+  color: white;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin: 0;
 }
 
 .App-header p {
-  font-size: 1.2rem;
-  opacity: 0.95;
-  font-weight: 300;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
 }
 
 .container {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
+  padding: 0 20px;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  min-height: calc(100vh - 300px);
+}
+
+.left-panel {
+  width: 100%;
+}
+
+.App-footer {
+  margin-top: 40px;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-align: center;
+  border-radius: 16px 16px 0 0;
+}
+
+.App-footer p {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
 }
 
 .loading {

@@ -171,6 +171,12 @@
   font-size: 1.1rem;
 }
 
+.expense-subcategory {
+  font-weight: 400;
+  color: #666;
+  font-size: 0.9rem;
+}
+
 .expense-description {
   color: #666;
   font-size: 0.9rem;
@@ -209,6 +215,106 @@
   padding: 40px;
   color: #999;
   font-size: 1.1rem;
+}
+
+.icon-inline {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.expense-actions-section {
+  margin-bottom: 30px;
+}
+
+.expense-actions-card {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.expense-actions-card h2 {
+  margin-bottom: 24px;
+  color: #1e293b;
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.quick-add-parents {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.send-parents-btn {
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.send-parents-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+}
+
+.send-parents-btn:active {
+  transform: translateY(0);
+}
+
+.share-report-section {
+  text-align: center;
+}
+
+.share-report-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.share-report-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.action-hint {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.action-hint-small {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+  text-align: center;
 }
 
 @media (max-width: 768px) {

@@ -1,15 +1,20 @@
 .budget-form-card {
   background: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   height: 100%;
+  border: 1px solid #e2e8f0;
 }
 
 .budget-form-card h2 {
-  margin-bottom: 20px;
-  color: #333;
-  font-size: 1.5rem;
+  margin-bottom: 24px;
+  color: #1e293b;
+  font-size: 1.4rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .form-group {
@@ -17,10 +22,18 @@
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: #475569;
   font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.icon-inline {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .radio-group {
@@ -47,35 +60,40 @@
 .form-group input[type="text"],
 .form-group input[type="number"] {
   width: 100%;
-  padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
   font-size: 1rem;
-  transition: border-color 0.3s;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+  color: #1e293b;
 }
 
 .form-group select:focus,
 .form-group input:focus {
   outline: none;
   border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .submit-btn {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.2s ease;
+  margin-top: 8px;
 }
 
 .submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
 }
 
 .submit-btn:active {

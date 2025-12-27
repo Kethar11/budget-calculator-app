@@ -58,7 +58,7 @@ const BudgetList = ({ transactions, onDelete }) => {
                   <div className="transaction-date">{formatDate(transaction.date || transaction.createdAt)}</div>
                 </div>
                 <div className={`transaction-amount ${transaction.type}`}>
-                  {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount || 0).toFixed(2)}
+                  {transaction.type === 'income' ? '+' : '-'}€{Math.abs(transaction.amount || 0).toFixed(2)}
                 </div>
               </div>
               <button

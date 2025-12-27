@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Calendar, Clock } from 'lucide-react';
 import './BudgetForm.css';
 
 const BudgetForm = ({ onAdd }) => {
@@ -6,12 +7,14 @@ const BudgetForm = ({ onAdd }) => {
     type: 'expense',
     category: '',
     amount: '',
-    description: ''
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().slice(0, 5)
   });
 
   const categories = {
-    income: ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'],
-    expense: ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Education', 'Other']
+    income: ['Salary', 'Freelance', 'Investment', 'Other'],
+    expense: ['Food', 'Transport', 'Bills', 'Shopping', 'Other']
   };
 
   const handleSubmit = async (e) => {
@@ -22,15 +25,19 @@ const BudgetForm = ({ onAdd }) => {
     }
 
     try {
+      const dateTime = new Date(`${formData.date}T${formData.time}`);
       await onAdd({
         ...formData,
-        amount: parseFloat(formData.amount)
+        amount: parseFloat(formData.amount),
+        date: dateTime.toISOString()
       });
       setFormData({
         type: 'expense',
         category: '',
         amount: '',
-        description: ''
+        description: '',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0, 5)
       });
     } catch (error) {
       alert('Error adding transaction');
@@ -92,7 +99,7 @@ const BudgetForm = ({ onAdd }) => {
         </div>
 
         <div className="form-group">
-          <label>Amount ($)</label>
+          <label>Amount (€)</label>
           <input
             type="number"
             name="amount"
@@ -100,6 +107,34 @@ const BudgetForm = ({ onAdd }) => {
             onChange={handleChange}
             step="0.01"
             min="0"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label>
+            <Calendar size={16} className="icon-inline" />
+            Date
+          </label>
+          <input
+            type="date"
+            name="date"
+            value={formData.date}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label>
+            <Clock size={16} className="icon-inline" />
+            Time
+          </label>
+          <input
+            type="time"
+            name="time"
+            value={formData.time}
+            onChange={handleChange}
             required
           />
         </div>

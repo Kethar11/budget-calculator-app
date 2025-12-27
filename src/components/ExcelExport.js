@@ -1,4 +1,5 @@
 import React from 'react';
+import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import './ExcelExport.css';
 
@@ -36,7 +37,8 @@ const ExcelExport = ({ transactions }) => {
       <h2>Excel Operations</h2>
       <div className="excel-buttons">
         <button onClick={exportToExcel} className="excel-btn export-btn">
-          📥 Export to Excel
+          <Download size={18} className="icon-inline" />
+          Export to Excel
         </button>
       </div>
       <p className="excel-hint">

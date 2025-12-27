@@ -1,8 +1,9 @@
 .budget-list-card {
   background: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
 }
 
 .list-header {
@@ -43,11 +44,12 @@
 }
 
 .transaction-item {
-  padding: 15px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  transition: box-shadow 0.2s;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+  background: #f8fafc;
 }
 
 .transaction-item:hover {
