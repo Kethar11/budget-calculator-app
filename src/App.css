@@ -44,21 +44,45 @@
   font-weight: 400;
 }
 
-.container {
+.main-container {
   max-width: 1600px;
   margin: 0 auto;
   padding: 0 20px;
-}
-
-.main-layout {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-  min-height: calc(100vh - 300px);
+  grid-template-columns: 280px 1fr;
+  gap: 30px;
+  align-items: start;
 }
 
 .left-panel {
+  position: relative;
+}
+
+.right-panel {
   width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .main-container {
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .left-panel {
+    order: 1;
+  }
+  
+  .right-panel {
+    order: 2;
+  }
 }
 
 .App-footer {

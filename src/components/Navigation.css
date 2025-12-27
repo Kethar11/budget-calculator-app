@@ -1,46 +1,99 @@
-.navigation {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 35px;
-  flex-wrap: wrap;
+.sidebar-navigation {
+  width: 250px;
+  min-height: calc(100vh - 200px);
   background: white;
-  padding: 8px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 20px;
+  align-self: flex-start;
 }
 
-.nav-btn {
-  padding: 14px 28px;
+.nav-header {
+  padding: 0 20px 20px 20px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 15px;
+}
+
+.nav-header h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.nav-item {
+  padding: 14px 16px;
   font-size: 1rem;
   font-weight: 500;
   border: none;
   background: transparent;
   color: #64748b;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  text-align: left;
+  width: 100%;
 }
 
-.nav-btn:hover {
+.nav-item:hover {
   background: #f1f5f9;
   color: #475569;
 }
 
-.nav-btn.active {
+.nav-item.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
+.nav-item.active:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+@media (max-width: 1024px) {
+  .sidebar-navigation {
+    width: 200px;
+  }
+  
+  .nav-item {
+    padding: 12px 14px;
+    font-size: 0.95rem;
+  }
+}
+
 @media (max-width: 768px) {
-  .nav-btn {
-    padding: 10px 20px;
-    font-size: 1rem;
+  .sidebar-navigation {
+    width: 100%;
+    min-height: auto;
+    position: relative;
+    top: 0;
+    margin-bottom: 20px;
+  }
+  
+  .nav-items {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0 12px;
+  }
+  
+  .nav-item {
+    white-space: nowrap;
+    min-width: fit-content;
   }
 }
 

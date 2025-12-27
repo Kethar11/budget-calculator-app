@@ -6,6 +6,7 @@ const BudgetForm = ({ onAdd }) => {
   const [formData, setFormData] = useState({
     type: 'expense',
     category: '',
+    subcategory: '',
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
@@ -13,8 +14,90 @@ const BudgetForm = ({ onAdd }) => {
   });
 
   const categories = {
-    income: ['Salary', 'Freelance', 'Investment', 'Other'],
-    expense: ['Food', 'Transport', 'Bills', 'Shopping', 'Other']
+    income: ['Salary', 'Freelance', 'Investment', 'Bonus', 'Rental Income', 'Other'],
+    expense: [
+      'Fixed Expenses',
+      'Food',
+      'Transport',
+      'Lifestyle',
+      'Shopping',
+      'Travel',
+      'Donation',
+      'Savings & Investments',
+      'Send Money to Parents',
+      'Other'
+    ]
+  };
+
+  const subcategories = {
+    'Fixed Expenses': [
+      'Rent',
+      'Electricity',
+      'Water',
+      'Internet',
+      'Phone/Internet',
+      'House Insurance',
+      'Groceries'
+    ],
+    'Food': [
+      'Groceries',
+      'Food Outside',
+      'Restaurant',
+      'Takeaway',
+      'Coffee/Tea',
+      'Snacks'
+    ],
+    'Transport': [
+      'Public Transport',
+      'Taxi/Uber',
+      'Fuel',
+      'Car Maintenance',
+      'Parking',
+      'Bike/Scooter'
+    ],
+    'Lifestyle': [
+      'Movie',
+      'Entertainment',
+      'Fitness/Badminton',
+      'Gym/Basic Fit',
+      'Hobbies',
+      'Temu',
+      'Subscriptions'
+    ],
+    'Shopping': [
+      'Dress/Clothing',
+      'Tools',
+      'Electronics',
+      'Home & Kitchen',
+      'Books',
+      'Beauty & Personal Care',
+      'Sports & Outdoors',
+      'Accessories',
+      'Other Shopping'
+    ],
+    'Travel': [
+      'Flight',
+      'Hotel',
+      'Train',
+      'Food & Dining',
+      'Activities',
+      'Shopping',
+      'Other Travel'
+    ],
+    'Donation': [
+      'Charity',
+      'Religious',
+      'Education',
+      'Medical',
+      'Other Donation'
+    ],
+    'Savings & Investments': [
+      'Savings Deposit',
+      'Investment',
+      'Emergency Fund'
+    ],
+    'Send Money to Parents': [],
+    'Other': []
   };
 
   const handleSubmit = async (e) => {
@@ -34,6 +117,7 @@ const BudgetForm = ({ onAdd }) => {
       setFormData({
         type: 'expense',
         category: '',
+        subcategory: '',
         amount: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
@@ -88,7 +172,10 @@ const BudgetForm = ({ onAdd }) => {
           <select
             name="category"
             value={formData.category}
-            onChange={handleChange}
+            onChange={(e) => {
+              handleChange(e);
+              setFormData(prev => ({ ...prev, subcategory: '' }));
+            }}
             required
           >
             <option value="">Select category</option>
@@ -97,6 +184,23 @@ const BudgetForm = ({ onAdd }) => {
             ))}
           </select>
         </div>
+
+        {formData.type === 'expense' && formData.category && subcategories[formData.category] && subcategories[formData.category].length > 0 && (
+          <div className="form-group">
+            <label>Subcategory</label>
+            <select
+              name="subcategory"
+              value={formData.subcategory || ''}
+              onChange={handleChange}
+            >
+              <option value="">Select subcategory (optional)</option>
+              {subcategories[formData.category].map(subcat => (
+                <option key={subcat} value={subcat}>{subcat}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
 
         <div className="form-group">
           <label>Amount (€)</label>

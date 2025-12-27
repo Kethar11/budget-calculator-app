@@ -16,16 +16,16 @@ function App() {
           <Calculator size={40} className="header-icon" />
           <h1>Complete Financial Calculator</h1>
         </div>
-        <p>Budget • Savings • Expenses with Beautiful Analytics</p>
+        <p>Budget • Savings • Expenses</p>
       </header>
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div className="container">
-        <div className="main-layout">
-          <div className="left-panel">
-            {activeTab === 'budget' && <BudgetCalculator />}
-            {activeTab === 'savings' && <SavingsCalculator />}
-            {activeTab === 'expense' && <ExpenseCalculator />}
-          </div>
+      <div className="main-container">
+        <div className="left-panel">
+          <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
+        <div className="right-panel">
+          {activeTab === 'budget' && <BudgetCalculator />}
+          {activeTab === 'savings' && <SavingsCalculator />}
+          {activeTab === 'expense' && <ExpenseCalculator />}
         </div>
       </div>
       <footer className="App-footer">

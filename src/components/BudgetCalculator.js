@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, TrendingUp, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { Calendar, TrendingUp, BarChart3, PieChart as PieChartIcon, Search, Trash2, File } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { db } from '../utils/database';
 import BudgetForm from './BudgetForm';
-import BudgetList from './BudgetList';
+import TableView from './TableView';
+import FileUpload from './FileUpload';
+import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import BudgetPlanner from './BudgetPlanner';
 import ExcelExport from './ExcelExport';
+import DateRangePicker from './DateRangePicker';
 import './BudgetCalculator.css';
 
 const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b', '#fa709a', '#fee140', '#30cfd0', '#330867'];
@@ -16,15 +19,37 @@ const BudgetCalculator = () => {
   const [chartView, setChartView] = useState('monthly'); // monthly, weekly, yearly
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState('all'); // 'all', 'income', 'expense'
+  const [transactionFiles, setTransactionFiles] = useState({});
 
   useEffect(() => {
     loadTransactions();
   }, []);
 
+  useEffect(() => {
+    const loadFilesForAll = async () => {
+      const filesMap = {};
+      for (const transaction of transactions) {
+        if (transaction.id) {
+          const files = await getFilesForTransaction(transaction.id, 'transaction');
+          if (files.length > 0) {
+            filesMap[transaction.id] = files;
+          }
+        }
+      }
+      setTransactionFiles(filesMap);
+    };
+    if (transactions.length > 0) {
+      loadFilesForAll();
+    }
+  }, [transactions]);
+
   const loadTransactions = async () => {
     try {
       const allTransactions = await db.transactions.toArray();
       setTransactions(allTransactions);
+      
     } catch (error) {
       console.error('Error loading transactions:', error);
     } finally {
@@ -34,12 +59,14 @@ const BudgetCalculator = () => {
 
   const addTransaction = async (transaction) => {
     try {
-      await db.transactions.add({
+      const transactionId = await db.transactions.add({
         ...transaction,
         date: transaction.date || new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        files: []
       });
       await loadTransactions();
+      return transactionId;
     } catch (error) {
       console.error('Error adding transaction:', error);
       throw error;
@@ -48,6 +75,9 @@ const BudgetCalculator = () => {
 
   const deleteTransaction = async (id) => {
     try {
+      // Delete associated files first
+      await deleteFilesForTransaction(id, 'transaction');
+      // Then delete the transaction
       await db.transactions.delete(id);
       await loadTransactions();
     } catch (error) {
@@ -56,22 +86,42 @@ const BudgetCalculator = () => {
   };
 
   const filteredTransactions = useMemo(() => {
-    if (!startDate && !endDate) return transactions;
+    let filtered = transactions;
     
-    return transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date || transaction.createdAt);
-      const transactionDateStr = transactionDate.toISOString().split('T')[0];
-      
-      if (startDate && endDate) {
-        return transactionDateStr >= startDate && transactionDateStr <= endDate;
-      } else if (startDate) {
-        return transactionDateStr >= startDate;
-      } else if (endDate) {
-        return transactionDateStr <= endDate;
-      }
-      return true;
-    });
-  }, [transactions, startDate, endDate]);
+    // Filter by date range
+    if (startDate || endDate) {
+      filtered = filtered.filter(transaction => {
+        const transactionDate = new Date(transaction.date || transaction.createdAt);
+        const transactionDateStr = transactionDate.toISOString().split('T')[0];
+        
+        if (startDate && endDate) {
+          return transactionDateStr >= startDate && transactionDateStr <= endDate;
+        } else if (startDate) {
+          return transactionDateStr >= startDate;
+        } else if (endDate) {
+          return transactionDateStr <= endDate;
+        }
+        return true;
+      });
+    }
+    
+    // Filter by type (income/expense)
+    if (transactionTypeFilter !== 'all') {
+      filtered = filtered.filter(t => t.type === transactionTypeFilter);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(transaction => 
+        (transaction.category || '').toLowerCase().includes(query) ||
+        (transaction.description || '').toLowerCase().includes(query) ||
+        (transaction.amount || 0).toString().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [transactions, startDate, endDate, transactionTypeFilter, searchQuery]);
 
   const summary = useMemo(() => {
     const income = filteredTransactions
@@ -148,7 +198,7 @@ const BudgetCalculator = () => {
       if (chartView === 'yearly') return a.period.localeCompare(b.period);
       return a.period.localeCompare(b.period);
     });
-  }, [transactions, chartView]);
+  }, [filteredTransactions, chartView]);
 
   if (loading) {
     return <div className="loading">Loading...</div>;
@@ -174,12 +224,68 @@ const BudgetCalculator = () => {
                 <div className="stat-value negative">€{summary.expenses.toFixed(2)}</div>
               </div>
               <div className="stat-item balance-stat">
-                <div className="stat-label">Balance</div>
-                <div className={`stat-value ${summary.balance >= 0 ? 'positive' : 'negative'}`}>
-                  €{summary.balance.toFixed(2)}
+                <div className="stat-label">Current Balance</div>
+                <div className={`stat-value ${summary.balance >= 0 ? 'positive' : 'negative'}`} style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                  {summary.balance >= 0 ? '+' : ''}€{summary.balance.toFixed(2)}
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="budget-filters-section">
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onClear={() => {
+            setStartDate('');
+            setEndDate('');
+          }}
+        />
+        
+        <div className="budget-filters">
+          <div className="filter-row">
+            <div className="filter-group">
+              <label>Search</label>
+              <div className="search-input-wrapper">
+                <Search size={18} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search transactions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+            </div>
+            <div className="filter-group">
+              <label>Filter by Type</label>
+              <select
+                value={transactionTypeFilter}
+                onChange={(e) => setTransactionTypeFilter(e.target.value)}
+                className="type-filter-select"
+              >
+                <option value="all">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
+            {(startDate || endDate || transactionTypeFilter !== 'all' || searchQuery) && (
+              <button
+                className="clear-filters-btn"
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                  setTransactionTypeFilter('all');
+                  setSearchQuery('');
+                }}
+              >
+                Clear All Filters
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -304,9 +410,56 @@ const BudgetCalculator = () => {
         <ExcelExport transactions={transactions} />
       </div>
 
-      <BudgetList
-        transactions={transactions}
-        onDelete={deleteTransaction}
+      <TableView
+        title={`All Transactions${(startDate || endDate || searchQuery || transactionTypeFilter !== 'all') ? ' (Filtered)' : ''}`}
+        data={filteredTransactions.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))}
+        columns={[
+          { key: 'type', header: 'Type', render: (val) => <span className={`transaction-type ${val}`}>{val.charAt(0).toUpperCase() + val.slice(1)}</span> },
+          { key: 'category', header: 'Category' },
+          { key: 'description', header: 'Description', render: (val) => val || 'N/A' },
+          { key: 'id', header: 'Files', render: (val, row) => {
+            const files = transactionFiles[val] || [];
+            if (files.length === 0) return <span style={{ color: '#94a3b8' }}>No files</span>;
+            return (
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <File size={14} style={{ color: '#667eea' }} />
+                <span style={{ fontSize: '0.85rem', color: '#475569' }}>{files.length} file{files.length > 1 ? 's' : ''}</span>
+              </div>
+            );
+          }},
+          { key: 'amount', header: 'Amount (€)', render: (val, row) => `${row.type === 'income' ? '+' : '-'}€${Math.abs(val).toFixed(2)}` },
+          { key: 'date', header: 'Date', render: (val) => new Date(val).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
+          {
+            key: 'id',
+            header: 'Actions',
+            render: (val, row) => (
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <FileUpload
+                  transactionId={val}
+                  transactionType="transaction"
+                  onFilesChange={async () => {
+                    const files = await getFilesForTransaction(val, 'transaction');
+                    setTransactionFiles(prev => ({ ...prev, [val]: files }));
+                  }}
+                  existingFiles={transactionFiles[val] || []}
+                  compact={true}
+                />
+                <button
+                  className="delete-btn-table"
+                  onClick={() => {
+                    if (window.confirm('Delete this transaction?')) {
+                      deleteTransaction(val);
+                    }
+                  }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            )
+          }
+        ]}
+        viewType="list"
+        emptyMessage="No transactions recorded yet. Add one above!"
       />
     </div>
   );

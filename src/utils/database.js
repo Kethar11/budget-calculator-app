@@ -25,5 +25,44 @@ db.version(2).stores({
   });
 });
 
+// Version 3 - Add savings deposits schema
+db.version(3).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt'
+}).upgrade(async tx => {
+  // Version 3 upgrade: Migrate old savings goals to new savings deposits if necessary
+  // For this change, we're completely replacing the concept, so old data might not be directly migratable
+});
+
+// Version 4 - Add file attachments support
+db.version(4).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt, files',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt, files',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt, files',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt',
+  files: '++id, transactionId, transactionType, fileName, fileType, fileSize, fileData, uploadedAt'
+}).upgrade(async tx => {
+  // Add files array to existing records
+  await tx.table('transactions').toCollection().modify(transaction => {
+    if (!transaction.files) {
+      transaction.files = [];
+    }
+  });
+  await tx.table('savings').toCollection().modify(saving => {
+    if (!saving.files) {
+      saving.files = [];
+    }
+  });
+  await tx.table('expenses').toCollection().modify(expense => {
+    if (!expense.files) {
+      expense.files = [];
+    }
+  });
+});
+
 export { db };
 

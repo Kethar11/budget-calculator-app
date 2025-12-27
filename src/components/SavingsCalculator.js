@@ -1,28 +1,53 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Trash2 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { Trash2, Download, Search, File } from 'lucide-react';
 import { db } from '../utils/database';
 import TableView from './TableView';
 import DateRangePicker from './DateRangePicker';
+import FileUpload from './FileUpload';
+import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
+import * as XLSX from 'xlsx';
 import './SavingsCalculator.css';
 
 const SavingsCalculator = () => {
   const [savings, setSavings] = useState([]);
   const [formData, setFormData] = useState({
-    goal: '',
-    currentAmount: '',
-    targetAmount: '',
-    monthlyContribution: '',
-    interestRate: ''
+    accountType: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    maturityDate: '',
+    interestRate: '',
+    description: ''
   });
   const [loading, setLoading] = useState(true);
   const [savingsView, setSavingsView] = useState('list');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [accountTypeFilter, setAccountTypeFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [savingsFiles, setSavingsFiles] = useState({});
 
   useEffect(() => {
     loadSavings();
   }, []);
+
+  useEffect(() => {
+    const loadFilesForAll = async () => {
+      const filesMap = {};
+      for (const saving of savings) {
+        if (saving.id) {
+          const files = await getFilesForTransaction(saving.id, 'savings');
+          if (files.length > 0) {
+            filesMap[saving.id] = files;
+          }
+        }
+      }
+      setSavingsFiles(filesMap);
+    };
+    if (savings.length > 0) {
+      loadFilesForAll();
+    }
+  }, [savings]);
 
   const loadSavings = async () => {
     try {
@@ -35,93 +60,148 @@ const SavingsCalculator = () => {
     }
   };
 
-  const addSavingsGoal = async (e) => {
+  const addSavings = async (e) => {
     e.preventDefault();
-    if (!formData.goal || !formData.currentAmount || !formData.targetAmount || !formData.monthlyContribution) {
-      alert('Please fill in all required fields');
+    if (!formData.accountType || !formData.amount || !formData.date) {
+      alert('Please fill in account type, amount, and date');
       return;
     }
 
     try {
       await db.savings.add({
         ...formData,
-        currentAmount: parseFloat(formData.currentAmount),
-        targetAmount: parseFloat(formData.targetAmount),
-        monthlyContribution: parseFloat(formData.monthlyContribution),
+        amount: parseFloat(formData.amount),
         interestRate: parseFloat(formData.interestRate) || 0,
-        date: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        date: formData.date,
+        maturityDate: formData.maturityDate || '',
+        createdAt: new Date().toISOString(),
+        files: []
       });
       setFormData({
-        goal: '',
-        currentAmount: '',
-        targetAmount: '',
-        monthlyContribution: '',
-        interestRate: ''
+        accountType: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        maturityDate: '',
+        interestRate: '',
+        description: ''
       });
       await loadSavings();
     } catch (error) {
-      console.error('Error adding savings goal:', error);
-      alert('Error adding savings goal');
+      console.error('Error adding savings:', error);
+      alert('Error adding savings');
     }
   };
 
-  const deleteSavingsGoal = async (id) => {
+  const deleteSavings = async (id) => {
     try {
+      // Delete associated files first
+      await deleteFilesForTransaction(id, 'savings');
+      // Then delete the savings entry
       await db.savings.delete(id);
       await loadSavings();
     } catch (error) {
-      console.error('Error deleting savings goal:', error);
+      console.error('Error deleting savings:', error);
     }
   };
 
-  const calculateSavingsProjection = (saving) => {
-    const monthlyRate = (saving.interestRate || 0) / 100 / 12;
-    const months = [];
-    let current = saving.currentAmount;
-    const target = saving.targetAmount;
-    const monthly = saving.monthlyContribution;
+  const accountTypes = [
+    'Livret A',
+    'Fixed Deposit',
+    'PPF (India)',
+    'Senior Citizen Scheme',
+    'Dad Savings',
+    'Recurring Deposit',
+    'Mutual Fund',
+    'Other'
+  ];
+
+  const filteredSavings = useMemo(() => {
+    let filtered = savings;
     
-    let month = 0;
-    while (current < target && month < 120) { // Max 10 years
-      current = current * (1 + monthlyRate) + monthly;
-      months.push({
-        month: month + 1,
-        amount: parseFloat(current.toFixed(2)),
-        target: target
+    // Filter by date range
+    if (startDate || endDate) {
+      filtered = filtered.filter(saving => {
+        const savingDate = new Date(saving.date || saving.createdAt);
+        const savingDateStr = savingDate.toISOString().split('T')[0];
+        
+        if (startDate && endDate) {
+          return savingDateStr >= startDate && savingDateStr <= endDate;
+        } else if (startDate) {
+          return savingDateStr >= startDate;
+        } else if (endDate) {
+          return savingDateStr <= endDate;
+        }
+        return true;
       });
-      month++;
-      if (current >= target) break;
     }
     
-    return {
-      monthsToGoal: month,
-      finalAmount: parseFloat(current.toFixed(2)),
-      projection: months
-    };
-  };
-
-  const savingsProjections = useMemo(() => {
-    return savings.map(saving => ({
-      ...saving,
-      projection: calculateSavingsProjection(saving)
-    }));
-  }, [savings]);
+    // Filter by account type
+    if (accountTypeFilter !== 'all') {
+      filtered = filtered.filter(saving => saving.accountType === accountTypeFilter);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(saving => 
+        (saving.accountType || '').toLowerCase().includes(query) ||
+        (saving.description || '').toLowerCase().includes(query) ||
+        (saving.amount || 0).toString().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [savings, startDate, endDate, accountTypeFilter, searchQuery]);
 
   const totalSavings = useMemo(() => {
-    return savings.reduce((sum, s) => sum + (s.currentAmount || 0), 0);
-  }, [savings]);
+    return filteredSavings.reduce((sum, s) => sum + (s.amount || 0), 0);
+  }, [filteredSavings]);
 
-  const totalTarget = useMemo(() => {
-    return savings.reduce((sum, s) => sum + (s.targetAmount || 0), 0);
-  }, [savings]);
+  const savingsByAccount = useMemo(() => {
+    const accounts = {};
+    filteredSavings.forEach(saving => {
+      const account = saving.accountType || 'Other';
+      accounts[account] = (accounts[account] || 0) + (saving.amount || 0);
+    });
+    return Object.entries(accounts).map(([name, value]) => ({
+      name,
+      value: parseFloat(value.toFixed(2))
+    })).sort((a, b) => b.value - a.value);
+  }, [filteredSavings]);
 
-  const progressData = savings.map(s => ({
-    name: s.goal,
-    current: s.currentAmount,
-    target: s.targetAmount,
-    remaining: s.targetAmount - s.currentAmount
-  }));
+  const monthlySavingsData = useMemo(() => {
+    const monthly = {};
+    filteredSavings.forEach(saving => {
+      const date = new Date(saving.date || saving.createdAt);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthly[monthKey]) {
+        monthly[monthKey] = { month: monthKey, amount: 0 };
+      }
+      monthly[monthKey].amount += saving.amount || 0;
+    });
+    return Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month));
+  }, [filteredSavings]);
+
+  const exportToExcel = () => {
+    if (filteredSavings.length === 0) {
+      alert('No savings to export');
+      return;
+    }
+
+    const data = filteredSavings.map(saving => ({
+      'Account Type': saving.accountType || 'N/A',
+      'Amount (€)': saving.amount || 0,
+      'Deposit Date': saving.date ? new Date(saving.date).toLocaleDateString('en-US') : 'N/A',
+      'Maturity Date': saving.maturityDate ? new Date(saving.maturityDate).toLocaleDateString('en-US') : 'N/A',
+      'Interest Rate (%)': saving.interestRate || 0,
+      'Description': saving.description || 'N/A'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Savings');
+    XLSX.writeFile(wb, `savings-${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
 
   if (loading) {
     return <div className="loading">Loading...</div>;
@@ -132,62 +212,70 @@ const SavingsCalculator = () => {
       <div className="savings-grid">
         <div className="savings-form-section">
           <div className="savings-form-card">
-            <h2>Add Savings Goal</h2>
-            <form onSubmit={addSavingsGoal}>
+            <h2>Add Savings</h2>
+            <form onSubmit={addSavings}>
               <div className="form-group">
-                <label>Goal Name</label>
-                <input
-                  type="text"
-                  value={formData.goal}
-                  onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
+                <label>Account Type</label>
+                <select
+                  value={formData.accountType}
+                  onChange={(e) => setFormData({ ...formData, accountType: e.target.value })}
                   required
-                />
+                >
+                  <option value="">Select account type</option>
+                  {accountTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
-                <label>Current Amount (€)</label>
+                <label>Amount (€)</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.currentAmount}
-                  onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   required
                 />
               </div>
               <div className="form-group">
-                <label>Target Amount (€)</label>
+                <label>Date of Deposit</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.targetAmount}
-                  onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
                 />
               </div>
               <div className="form-group">
-                <label>Monthly Contribution (€)</label>
+                <label>Maturity Date (Optional)</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.monthlyContribution}
-                  onChange={(e) => setFormData({ ...formData, monthlyContribution: e.target.value })}
-                  required
+                  type="date"
+                  value={formData.maturityDate}
+                  onChange={(e) => setFormData({ ...formData, maturityDate: e.target.value })}
                 />
               </div>
               <div className="form-group">
-                <label>Annual Interest Rate (%)</label>
+                <label>Interest Rate (%)</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
-                  max="100"
                   value={formData.interestRate}
                   onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
+                  placeholder="e.g., 3.5"
                 />
               </div>
-              <button type="submit" className="submit-btn">Add Savings Goal</button>
+              <div className="form-group">
+                <label>Description (Optional)</label>
+                <input
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="e.g., Dad's savings account"
+                />
+              </div>
+              <button type="submit" className="submit-btn">Add Savings</button>
             </form>
           </div>
         </div>
@@ -197,21 +285,23 @@ const SavingsCalculator = () => {
             <h2>Savings Summary</h2>
             <div className="summary-stats">
               <div className="stat-item">
-                <div className="stat-label">Total Current Savings</div>
+                <div className="stat-label">Total Savings</div>
                 <div className="stat-value positive">€{totalSavings.toFixed(2)}</div>
               </div>
               <div className="stat-item">
-                <div className="stat-label">Total Target</div>
-                <div className="stat-value">€{totalTarget.toFixed(2)}</div>
+                <div className="stat-label">Number of Deposits</div>
+                <div className="stat-value">{filteredSavings.length}</div>
               </div>
               <div className="stat-item">
-                <div className="stat-label">Remaining to Save</div>
-                <div className="stat-value negative">€{(totalTarget - totalSavings).toFixed(2)}</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-label">Progress</div>
+                <div className="stat-label">Average Deposit</div>
                 <div className="stat-value">
-                  {totalTarget > 0 ? ((totalSavings / totalTarget) * 100).toFixed(1) : 0}%
+                  €{filteredSavings.length > 0 ? (totalSavings / filteredSavings.length).toFixed(2) : '0.00'}
+                </div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-label">Top Account Type</div>
+                <div className="stat-value">
+                  {savingsByAccount.length > 0 ? savingsByAccount[0].name : 'N/A'}
                 </div>
               </div>
             </div>
@@ -220,83 +310,171 @@ const SavingsCalculator = () => {
       </div>
 
       <div className="savings-list-section">
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onClear={() => {
+            setStartDate('');
+            setEndDate('');
+          }}
+        />
+        
+        <div className="savings-filters">
+          <div className="filter-row">
+            <div className="filter-group">
+              <label>Search</label>
+              <div className="search-input-wrapper">
+                <Search size={18} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search by account type, description, or amount..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+            </div>
+            <div className="filter-group">
+              <label>Filter by Account Type</label>
+              <select
+                value={accountTypeFilter}
+                onChange={(e) => setAccountTypeFilter(e.target.value)}
+                className="account-filter-select"
+              >
+                <option value="all">All Account Types</option>
+                {accountTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="quick-filter-buttons">
+            <button
+              className={`quick-filter-btn ${accountTypeFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setAccountTypeFilter('all')}
+            >
+              All
+            </button>
+            {accountTypes.slice(0, 4).map(type => (
+              <button
+                key={type}
+                className={`quick-filter-btn ${accountTypeFilter === type ? 'active' : ''}`}
+                onClick={() => setAccountTypeFilter(type)}
+              >
+                {type}
+              </button>
+            ))}
+            {(startDate || endDate || accountTypeFilter !== 'all' || searchQuery) && (
+              <button
+                className="clear-filters-btn"
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                  setAccountTypeFilter('all');
+                  setSearchQuery('');
+                }}
+              >
+                Clear All Filters
+              </button>
+            )}
+          </div>
+        </div>
+        
         <TableView
-          title="Your Savings Goals"
-          data={savings.map(saving => {
-            const projection = calculateSavingsProjection(saving);
-            const progress = (saving.currentAmount / saving.targetAmount) * 100;
-            return {
+          title={`Your Savings${(startDate || endDate || accountTypeFilter !== 'all' || searchQuery) ? ' (Filtered)' : ''}`}
+          data={filteredSavings
+            .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
+            .map(saving => ({
               ...saving,
-              projection,
-              progress
-            };
-          })}
+              formattedDate: new Date(saving.date || saving.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              }),
+              formattedMaturityDate: saving.maturityDate ? new Date(saving.maturityDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              }) : 'N/A'
+            }))}
           columns={[
-            { key: 'goal', header: 'Goal' },
-            { key: 'currentAmount', header: 'Current (€)', render: (val) => `€${val.toFixed(2)}` },
-            { key: 'targetAmount', header: 'Target (€)', render: (val) => `€${val.toFixed(2)}` },
-            { key: 'monthlyContribution', header: 'Monthly (€)', render: (val) => `€${val.toFixed(2)}` },
-            { key: 'interestRate', header: 'Interest (%)', render: (val) => `${val || 0}%` },
-            { key: 'projection', header: 'Months to Goal', render: (val) => val.monthsToGoal },
-            { key: 'progress', header: 'Progress (%)', render: (val) => `${val.toFixed(1)}%` },
+            { key: 'accountType', header: 'Account Type' },
+            { key: 'id', header: 'Files', render: (val) => {
+              const files = savingsFiles[val] || [];
+              if (files.length === 0) return <span style={{ color: '#94a3b8' }}>No files</span>;
+              return (
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <File size={14} style={{ color: '#667eea' }} />
+                  <span style={{ fontSize: '0.85rem', color: '#475569' }}>{files.length} file{files.length > 1 ? 's' : ''}</span>
+                </div>
+              );
+            }},
+            { key: 'amount', header: 'Amount (€)', render: (val) => `€${val.toFixed(2)}` },
+            { key: 'formattedDate', header: 'Deposit Date' },
+            { key: 'formattedMaturityDate', header: 'Maturity Date' },
+            { key: 'interestRate', header: 'Interest (%)', render: (val) => val ? `${val}%` : 'N/A' },
+            { key: 'description', header: 'Description', render: (val) => val || 'N/A' },
             {
               key: 'id',
               header: 'Actions',
               render: (val) => (
-                <button
-                  className="delete-btn-table"
-                  onClick={() => {
-                    if (window.confirm('Delete this savings goal?')) {
-                      deleteSavingsGoal(val);
-                    }
-                  }}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <FileUpload
+                    transactionId={val}
+                    transactionType="savings"
+                    onFilesChange={async () => {
+                      const files = await getFilesForTransaction(val, 'savings');
+                      setSavingsFiles(prev => ({ ...prev, [val]: files }));
+                    }}
+                    existingFiles={savingsFiles[val] || []}
+                    compact={true}
+                  />
+                  <button
+                    className="delete-btn-table"
+                    onClick={() => {
+                      if (window.confirm('Delete this savings deposit?')) {
+                        deleteSavings(val);
+                      }
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               )
             }
           ]}
           viewType={savingsView}
           onViewChange={setSavingsView}
-          emptyMessage="No savings goals yet. Add one above!"
+          emptyMessage="No savings deposits yet. Add one above!"
           chartContent={
-            savingsView === 'chart' && savingsProjections.length > 0 ? (
+            savingsView === 'chart' && filteredSavings.length > 0 ? (
               <div className="savings-charts-in-table">
                 <div className="chart-card">
-                  <h3>Savings Progress</h3>
+                  <h3>Savings by Account Type</h3>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={progressData}>
+                    <BarChart data={savingsByAccount}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
-                      <Legend />
-                      <Bar dataKey="current" fill="#10b981" name="Current" />
-                      <Bar dataKey="target" fill="#667eea" name="Target" />
+                      <Bar dataKey="value" fill="#10b981" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                {savingsProjections.map(saving => (
-                  <div key={saving.id} className="chart-card">
-                    <h3>{saving.goal} - Projection</h3>
-                    <div className="projection-info">
-                      <p><strong>Months to Goal:</strong> {saving.projection.monthsToGoal}</p>
-                      <p><strong>Final Amount:</strong> €{saving.projection.finalAmount.toFixed(2)}</p>
-                    </div>
-                    {saving.projection.projection.length > 0 && (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={saving.projection.projection}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
-                          <Area type="monotone" dataKey="amount" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
-                          <Line type="monotone" dataKey="target" stroke="#667eea" strokeWidth={2} strokeDasharray="5 5" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                ))}
+                <div className="chart-card">
+                  <h3>Monthly Savings Trend</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={monthlySavingsData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                      <Line type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={3} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             ) : null
           }
@@ -307,4 +485,3 @@ const SavingsCalculator = () => {
 };
 
 export default SavingsCalculator;
-

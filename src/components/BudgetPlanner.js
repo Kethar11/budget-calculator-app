@@ -104,10 +104,15 @@ const BudgetPlanner = ({ transactions }) => {
   }, [budgets, transactions]);
 
   const categories = [
+    'Fixed Expenses',
     'Food',
     'Transport',
-    'Bills',
+    'Lifestyle',
     'Shopping',
+    'Travel',
+    'Donation',
+    'Savings & Investments',
+    'Send Money to Parents',
     'Other'
   ];
 

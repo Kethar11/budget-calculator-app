@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Mail, Trash2 } from 'lucide-react';
+import { Mail, Trash2, File, Search } from 'lucide-react';
 import TableView from './TableView';
 import DateRangePicker from './DateRangePicker';
+import FileUpload from './FileUpload';
+import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import {
   PieChart,
   Pie,
@@ -36,10 +38,31 @@ const ExpenseCalculator = () => {
   const [expenseView, setExpenseView] = useState('list');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expenseFiles, setExpenseFiles] = useState({});
 
   useEffect(() => {
     loadExpenses();
   }, []);
+
+  useEffect(() => {
+    const loadFilesForAll = async () => {
+      const filesMap = {};
+      for (const expense of expenses) {
+        if (expense.id) {
+          const files = await getFilesForTransaction(expense.id, 'expense');
+          if (files.length > 0) {
+            filesMap[expense.id] = files;
+          }
+        }
+      }
+      setExpenseFiles(filesMap);
+    };
+    if (expenses.length > 0) {
+      loadFilesForAll();
+    }
+  }, [expenses]);
 
   const loadExpenses = async () => {
     try {
@@ -66,7 +89,8 @@ const ExpenseCalculator = () => {
         amount: parseFloat(formData.amount),
         description: formData.description || '',
         date: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        files: []
       });
       setFormData({
         category: '',
@@ -83,6 +107,9 @@ const ExpenseCalculator = () => {
 
   const deleteExpense = async (id) => {
     try {
+      // Delete associated files first
+      await deleteFilesForTransaction(id, 'expense');
+      // Then delete the expense
       await db.expenses.delete(id);
       await loadExpenses();
     } catch (error) {
@@ -90,72 +117,34 @@ const ExpenseCalculator = () => {
     }
   };
 
-  const sendToParents = () => {
-    if (expenses.length === 0) {
-      alert('No expenses to share');
-      return;
-    }
-
-    // Generate expense report
-    const report = generateExpenseReport();
-    
-    // Create email content
-    const subject = encodeURIComponent('My Expense Report');
-    const body = encodeURIComponent(report);
-    
-    // Open email client
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  };
-
-  const generateExpenseReport = () => {
-    const date = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    
-    let report = `EXPENSE REPORT - ${date}\n\n`;
-    report += `Total Expenses: €${totalExpenses.toFixed(2)}\n`;
-    report += `Number of Expenses: ${expenses.length}\n`;
-    report += `Average Expense: €${averageExpense.toFixed(2)}\n\n`;
-    report += `--- EXPENSES BY CATEGORY ---\n\n`;
-    
-    categoryData.forEach(cat => {
-      report += `${cat.name}: €${cat.value.toFixed(2)}\n`;
-    });
-    
-    report += `\n--- DETAILED EXPENSES ---\n\n`;
-    expenses
-      .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
-      .forEach(expense => {
-        const expenseDate = new Date(expense.date || expense.createdAt).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric'
-        });
-        report += `${expenseDate} - ${expense.category}: €${expense.amount.toFixed(2)} - ${expense.description}\n`;
-      });
-    
-    return report;
-  };
 
   const filteredExpenses = useMemo(() => {
-    if (!startDate && !endDate) return expenses;
+    let filtered = expenses;
     
-    return expenses.filter(expense => {
-      const expenseDate = new Date(expense.date || expense.createdAt);
-      const expenseDateStr = expenseDate.toISOString().split('T')[0];
-      
-      if (startDate && endDate) {
-        return expenseDateStr >= startDate && expenseDateStr <= endDate;
-      } else if (startDate) {
-        return expenseDateStr >= startDate;
-      } else if (endDate) {
-        return expenseDateStr <= endDate;
-      }
-      return true;
-    });
-  }, [expenses, startDate, endDate]);
+    // Filter by date range
+    if (startDate || endDate) {
+      filtered = filtered.filter(expense => {
+        const expenseDate = new Date(expense.date || expense.createdAt);
+        const expenseDateStr = expenseDate.toISOString().split('T')[0];
+        
+        if (startDate && endDate) {
+          return expenseDateStr >= startDate && expenseDateStr <= endDate;
+        } else if (startDate) {
+          return expenseDateStr >= startDate;
+        } else if (endDate) {
+          return expenseDateStr <= endDate;
+        }
+        return true;
+      });
+    }
+    
+    // Filter by category
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(expense => expense.category === categoryFilter);
+    }
+    
+    return filtered;
+  }, [expenses, startDate, endDate, categoryFilter]);
 
   const categoryData = useMemo(() => {
     const categories = {};
@@ -204,14 +193,88 @@ const ExpenseCalculator = () => {
   }, [filteredExpenses, totalExpenses]);
 
   const categories = [
+    'Fixed Expenses',
     'Food',
     'Transport',
-    'Bills',
+    'Lifestyle',
     'Shopping',
-    'Rent',
-    'Send to Parents',
+    'Travel',
+    'Donation',
+    'Savings & Investments',
+    'Send Money to Parents',
     'Other'
   ];
+
+  const subcategories = {
+    'Fixed Expenses': [
+      'Rent',
+      'Electricity',
+      'Water',
+      'Internet',
+      'Phone/Internet',
+      'House Insurance',
+      'Groceries'
+    ],
+    'Food': [
+      'Groceries',
+      'Food Outside',
+      'Restaurant',
+      'Takeaway',
+      'Coffee/Tea',
+      'Snacks'
+    ],
+    'Transport': [
+      'Public Transport',
+      'Taxi/Uber',
+      'Fuel',
+      'Car Maintenance',
+      'Parking',
+      'Bike/Scooter'
+    ],
+    'Lifestyle': [
+      'Movie',
+      'Entertainment',
+      'Fitness/Badminton',
+      'Gym/Basic Fit',
+      'Hobbies',
+      'Temu',
+      'Subscriptions'
+    ],
+    'Shopping': [
+      'Dress/Clothing',
+      'Tools',
+      'Electronics',
+      'Home & Kitchen',
+      'Books',
+      'Beauty & Personal Care',
+      'Sports & Outdoors',
+      'Accessories',
+      'Other Shopping'
+    ],
+    'Travel': [
+      'Flight',
+      'Hotel',
+      'Train',
+      'Food & Dining',
+      'Activities',
+      'Shopping',
+      'Other Travel'
+    ],
+    'Donation': [
+      'Charity',
+      'Religious',
+      'Education',
+      'Medical',
+      'Other Donation'
+    ],
+    'Savings & Investments': [
+      'Savings Deposit',
+      'Investment',
+      'Emergency Fund'
+    ],
+    'Send Money to Parents': [],
+    'Other': []
+  };
 
   if (loading) {
     return <div className="loading">Loading...</div>;
@@ -237,6 +300,20 @@ const ExpenseCalculator = () => {
                   ))}
                 </select>
               </div>
+              {formData.category && subcategories[formData.category] && subcategories[formData.category].length > 0 && (
+                <div className="form-group">
+                  <label>Subcategory</label>
+                  <select
+                    value={formData.subcategory}
+                    onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                  >
+                    <option value="">Select subcategory (optional)</option>
+                    {subcategories[formData.category].map(subcat => (
+                      <option key={subcat} value={subcat}>{subcat}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="form-group">
                 <label>Amount (€)</label>
                 <input
@@ -290,51 +367,83 @@ const ExpenseCalculator = () => {
       </div>
 
 
-      <div className="expense-actions-section">
-        <div className="expense-actions-card">
-          <h2>Send Money to Parents</h2>
-          <div className="quick-add-parents">
-            <p className="action-hint">Quickly add an expense for money sent to parents</p>
-            <button
-              className="send-parents-btn"
-              onClick={() => {
-                setFormData({
-                  category: 'Send to Parents',
-                  subcategory: '',
-                  amount: '',
-                  description: 'Money sent to parents'
-                });
-                // Scroll to form
-                document.querySelector('.expense-form-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-            >
-              <Mail size={18} className="icon-inline" />
-              Add "Send to Parents" Expense
-            </button>
+      <div className="expense-list-section">
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onClear={() => {
+            setStartDate('');
+            setEndDate('');
+          }}
+        />
+        
+        <div className="expense-filters">
+          <div className="filter-row">
+            <div className="filter-group">
+              <label>Search</label>
+              <div className="search-input-wrapper">
+                <Search size={18} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search expenses..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+            </div>
+            <div className="filter-group">
+              <label>Filter by Category</label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="category-filter-select"
+              >
+              <option value="all">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+              </select>
+            </div>
           </div>
-          <div className="share-report-section">
+          <div className="quick-filter-buttons">
             <button
-              className="share-report-btn"
-              onClick={() => {
-                if (expenses.length === 0) {
-                  alert('No expenses to share');
-                  return;
-                }
-                sendToParents();
-              }}
+              className={`quick-filter-btn ${categoryFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setCategoryFilter('all')}
             >
-              <Mail size={18} className="icon-inline" />
-              Share Expense Report
+              All
             </button>
-            <p className="action-hint-small">Generate and email expense report to parents</p>
+            {categories.slice(0, 5).map(cat => (
+              <button
+                key={cat}
+                className={`quick-filter-btn ${categoryFilter === cat ? 'active' : ''}`}
+                onClick={() => setCategoryFilter(cat)}
+              >
+                {cat === 'Send Money to Parents' && <Mail size={16} className="icon-inline" />}
+                {cat}
+              </button>
+            ))}
+            {(startDate || endDate || categoryFilter !== 'all' || searchQuery) && (
+              <button
+                className="clear-filters-btn"
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                  setCategoryFilter('all');
+                  setSearchQuery('');
+                }}
+              >
+                Clear All Filters
+              </button>
+            )}
           </div>
         </div>
-      </div>
-
-      <div className="expense-list-section">
+        
         <TableView
-          title="All Expenses"
-          data={expenses
+          title={`All Expenses${(startDate || endDate || categoryFilter !== 'all' || searchQuery) ? ' (Filtered)' : ''}`}
+          data={filteredExpenses
             .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
             .map(expense => ({
               ...expense,
@@ -351,12 +460,22 @@ const ExpenseCalculator = () => {
           columns={[
             { key: 'category', header: 'Category', render: (val, row) => (
               <span>
-                {val === 'Send to Parents' && <Mail size={14} className="icon-inline" style={{ color: '#667eea', marginRight: '6px' }} />}
+                {val === 'Send Money to Parents' && <Mail size={14} className="icon-inline" style={{ color: '#667eea', marginRight: '6px' }} />}
                 {val}
                 {row.subcategory && <span className="expense-subcategory"> - {row.subcategory}</span>}
               </span>
             )},
             { key: 'description', header: 'Description', render: (val) => val || 'No description' },
+            { key: 'id', header: 'Files', render: (val) => {
+              const files = expenseFiles[val] || [];
+              if (files.length === 0) return <span style={{ color: '#94a3b8' }}>No files</span>;
+              return (
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <File size={14} style={{ color: '#667eea' }} />
+                  <span style={{ fontSize: '0.85rem', color: '#475569' }}>{files.length} file{files.length > 1 ? 's' : ''}</span>
+                </div>
+              );
+            }},
             { key: 'formattedDate', header: 'Date' },
             { key: 'formattedTime', header: 'Time' },
             { key: 'amount', header: 'Amount (€)', render: (val) => `€${val.toFixed(2)}` },
@@ -364,16 +483,28 @@ const ExpenseCalculator = () => {
               key: 'id',
               header: 'Actions',
               render: (val) => (
-                <button
-                  className="delete-btn-table"
-                  onClick={() => {
-                    if (window.confirm('Delete this expense?')) {
-                      deleteExpense(val);
-                    }
-                  }}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <FileUpload
+                    transactionId={val}
+                    transactionType="expense"
+                    onFilesChange={async () => {
+                      const files = await getFilesForTransaction(val, 'expense');
+                      setExpenseFiles(prev => ({ ...prev, [val]: files }));
+                    }}
+                    existingFiles={expenseFiles[val] || []}
+                    compact={true}
+                  />
+                  <button
+                    className="delete-btn-table"
+                    onClick={() => {
+                      if (window.confirm('Delete this expense?')) {
+                        deleteExpense(val);
+                      }
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               )
             }
           ]}
