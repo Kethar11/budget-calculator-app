@@ -1,0 +1,53 @@
+.excel-export-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.excel-export-card h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.excel-buttons {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.excel-btn {
+  flex: 1;
+  min-width: 150px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-align: center;
+}
+
+.export-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.excel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.excel-btn:active {
+  transform: translateY(0);
+}
+
+.excel-hint {
+  color: #666;
+  font-size: 0.9rem;
+  text-align: center;
+}
+

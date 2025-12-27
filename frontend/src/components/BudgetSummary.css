@@ -1,0 +1,48 @@
+.budget-summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.budget-summary-card h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.summary-item {
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+  padding-top: 20px;
+  margin-top: 10px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.summary-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.summary-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.summary-value.positive {
+  color: #10b981;
+}
+
+.summary-value.negative {
+  color: #ef4444;
+}
+
+.balance .summary-value {
+  font-size: 2.2rem;
+}
+
