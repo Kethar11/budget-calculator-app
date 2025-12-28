@@ -64,5 +64,28 @@ db.version(4).stores({
   });
 });
 
+// Version 5 - Add file management (bin, rename, restore)
+db.version(5).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt, files',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt, files',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt, files',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt',
+  files: '++id, transactionId, transactionType, fileName, fileType, fileSize, fileData, uploadedAt'
+}).upgrade(async tx => {
+  // Add bin/trash fields to existing files (non-indexed fields)
+  await tx.table('files').toCollection().modify(file => {
+    if (file.isDeleted === undefined) {
+      file.isDeleted = false;
+    }
+    if (!file.originalFileName) {
+      file.originalFileName = file.fileName || '';
+    }
+    if (!file.deletedAt) {
+      file.deletedAt = null;
+    }
+  });
+});
+
 export { db };
 

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, X, File, Image, FileText, Download, Eye } from 'lucide-react';
-import { saveFile, deleteFile, downloadFile, formatFileSize, isImageFile, isPDFFile, getFile } from '../utils/fileManager';
+import { Upload, X, File, Image, FileText, Download, Eye, Edit2, Check, Trash2 } from 'lucide-react';
+import { saveFile, moveFileToBin, renameFile, downloadFile, formatFileSize, isImageFile, isPDFFile, getFile } from '../utils/fileManager';
 import './FileUpload.css';
 
 const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFiles = [], compact = false }) => {
   const [files, setFiles] = useState(existingFiles);
   const [uploading, setUploading] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
+  const [editingFileId, setEditingFileId] = useState(null);
+  const [editFileName, setEditFileName] = useState('');
 
   useEffect(() => {
     setFiles(existingFiles);
@@ -68,20 +70,53 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
   };
 
   const handleDeleteFile = async (fileId, index) => {
-    if (!window.confirm('Are you sure you want to delete this file?')) {
+    if (!window.confirm('Move this file to bin? You can restore it later from the File Bin.')) {
       return;
     }
 
     try {
-      await deleteFile(fileId, transactionId, transactionType);
+      await moveFileToBin(fileId, transactionId, transactionType);
       const updatedFiles = files.filter((_, i) => i !== index);
       setFiles(updatedFiles);
       if (onFilesChange) {
         onFilesChange(updatedFiles);
       }
     } catch (error) {
-      console.error('Error deleting file:', error);
-      alert('Error deleting file. Please try again.');
+      console.error('Error moving file to bin:', error);
+      alert('Error moving file to bin. Please try again.');
+    }
+  };
+
+  const handleStartRename = (file) => {
+    setEditingFileId(file.id);
+    setEditFileName(file.fileName);
+  };
+
+  const handleCancelRename = () => {
+    setEditingFileId(null);
+    setEditFileName('');
+  };
+
+  const handleSaveRename = async (fileId) => {
+    if (!editFileName.trim()) {
+      alert('File name cannot be empty');
+      return;
+    }
+
+    try {
+      await renameFile(fileId, editFileName.trim());
+      const updatedFiles = files.map(f => 
+        f.id === fileId ? { ...f, fileName: editFileName.trim() } : f
+      );
+      setFiles(updatedFiles);
+      if (onFilesChange) {
+        onFilesChange(updatedFiles);
+      }
+      setEditingFileId(null);
+      setEditFileName('');
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      alert('Error renaming file. Please try again.');
     }
   };
 
@@ -135,8 +170,11 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
                   <button onClick={() => handleDownload(file)} title="Download">
                     <Download size={12} />
                   </button>
-                  <button onClick={() => handleDeleteFile(file.id, index)} title="Delete">
-                    <X size={12} />
+                  <button onClick={() => handleStartRename(file)} title="Rename">
+                    <Edit2 size={12} />
+                  </button>
+                  <button onClick={() => handleDeleteFile(file.id, index)} title="Move to Bin">
+                    <Trash2 size={12} />
                   </button>
                 </div>
               </div>
@@ -197,37 +235,81 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
                   {getFileIcon(file.fileType)}
                 </div>
                 <div className="file-info">
-                  <div className="file-name" title={file.fileName}>
-                    {file.fileName}
-                  </div>
+                  {editingFileId === file.id ? (
+                    <div className="file-rename-input">
+                      <input
+                        type="text"
+                        value={editFileName}
+                        onChange={(e) => setEditFileName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveRename(file.id);
+                          } else if (e.key === 'Escape') {
+                            handleCancelRename();
+                          }
+                        }}
+                        className="rename-input"
+                        autoFocus
+                      />
+                      <button
+                        className="file-action-btn save"
+                        onClick={() => handleSaveRename(file.id)}
+                        title="Save"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        className="file-action-btn cancel"
+                        onClick={handleCancelRename}
+                        title="Cancel"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="file-name" title={file.fileName}>
+                      {file.fileName}
+                    </div>
+                  )}
                   <div className="file-meta">
                     {formatFileSize(file.fileSize)} • {new Date(file.uploadedAt).toLocaleDateString()}
                   </div>
                 </div>
                 <div className="file-actions">
-                  {isImageFile(file.fileType) && (
-                    <button
-                      className="file-action-btn"
-                      onClick={() => handlePreview(file)}
-                      title="Preview"
-                    >
-                      <Eye size={14} />
-                    </button>
+                  {editingFileId !== file.id && (
+                    <>
+                      {isImageFile(file.fileType) && (
+                        <button
+                          className="file-action-btn"
+                          onClick={() => handlePreview(file)}
+                          title="Preview"
+                        >
+                          <Eye size={14} />
+                        </button>
+                      )}
+                      <button
+                        className="file-action-btn"
+                        onClick={() => handleDownload(file)}
+                        title="Download"
+                      >
+                        <Download size={14} />
+                      </button>
+                      <button
+                        className="file-action-btn edit"
+                        onClick={() => handleStartRename(file)}
+                        title="Rename"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        className="file-action-btn delete"
+                        onClick={() => handleDeleteFile(file.id, index)}
+                        title="Move to Bin"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
                   )}
-                  <button
-                    className="file-action-btn"
-                    onClick={() => handleDownload(file)}
-                    title="Download"
-                  >
-                    <Download size={14} />
-                  </button>
-                  <button
-                    className="file-action-btn delete"
-                    onClick={() => handleDeleteFile(file.id, index)}
-                    title="Delete"
-                  >
-                    <X size={14} />
-                  </button>
                 </div>
               </div>
             ))}

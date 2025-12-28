@@ -3,6 +3,7 @@ import './App.css';
 import BudgetCalculator from './components/BudgetCalculator';
 import SavingsCalculator from './components/SavingsCalculator';
 import ExpenseCalculator from './components/ExpenseCalculator';
+import FileBin from './components/FileBin';
 import Navigation from './components/Navigation';
 
 function App() {
@@ -63,6 +64,7 @@ function App() {
           {activeTab === 'budget' && <BudgetCalculator />}
           {activeTab === 'savings' && <SavingsCalculator />}
           {activeTab === 'expense' && <ExpenseCalculator />}
+          {activeTab === 'bin' && <FileBin />}
         </div>
       </div>
       <footer className="App-footer">

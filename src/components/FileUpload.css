@@ -141,6 +141,43 @@
   color: #ef4444;
 }
 
+.file-action-btn.edit:hover {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.file-action-btn.save:hover {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.file-action-btn.cancel:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.file-rename-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.rename-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.rename-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
 .file-preview-modal {
   position: fixed;
   top: 0;
