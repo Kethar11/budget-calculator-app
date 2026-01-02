@@ -23,3 +23,4 @@ The database will be recreated with the new schema automatically.
 
 After clearing, refresh the page and the app will work correctly!
 
+

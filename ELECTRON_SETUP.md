@@ -63,3 +63,4 @@ This creates a `.app` file in the `dist` folder that you can:
 - Data is stored locally on your Mac
 - No internet connection needed after installation
 
+

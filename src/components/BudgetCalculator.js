@@ -5,6 +5,7 @@ import { db } from '../utils/database';
 import BudgetForm from './BudgetForm';
 import TableView from './TableView';
 import FileUpload from './FileUpload';
+import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import BudgetPlanner from './BudgetPlanner';
 import ExcelExport from './ExcelExport';
@@ -22,6 +23,7 @@ const BudgetCalculator = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [transactionTypeFilter, setTransactionTypeFilter] = useState('all'); // 'all', 'income', 'expense'
   const [transactionFiles, setTransactionFiles] = useState({});
+  const [selectedFileModal, setSelectedFileModal] = useState(null); // { transactionId, files }
 
   useEffect(() => {
     loadTransactions();
@@ -421,10 +423,41 @@ const BudgetCalculator = () => {
             const files = transactionFiles[val] || [];
             if (files.length === 0) return <span style={{ color: '#94a3b8' }}>No files</span>;
             return (
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                <File size={14} style={{ color: '#667eea' }} />
-                <span style={{ fontSize: '0.85rem', color: '#475569' }}>{files.length} file{files.length > 1 ? 's' : ''}</span>
-              </div>
+              <button
+                onClick={() => setSelectedFileModal({ 
+                  transactionId: val, 
+                  files, 
+                  transactionType: 'transaction',
+                  category: row.category,
+                  description: row.description
+                })}
+                style={{
+                  display: 'flex',
+                  gap: '6px',
+                  alignItems: 'center',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  transition: 'all 0.2s',
+                  color: '#667eea'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                  e.currentTarget.style.textDecoration = 'underline';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.textDecoration = 'none';
+                }}
+                title="Click to view files"
+              >
+                <File size={14} />
+                <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>
+                  {files.length} file{files.length > 1 ? 's' : ''}
+                </span>
+              </button>
             );
           }},
           { key: 'amount', header: 'Amount (€)', render: (val, row) => `${row.type === 'income' ? '+' : '-'}€${Math.abs(val).toFixed(2)}` },
@@ -461,6 +494,17 @@ const BudgetCalculator = () => {
         viewType="list"
         emptyMessage="No transactions recorded yet. Add one above!"
       />
+
+      {selectedFileModal && (
+        <FileLinksModal
+          files={selectedFileModal.files}
+          transactionId={selectedFileModal.transactionId}
+          transactionType={selectedFileModal.transactionType}
+          transactionCategory={selectedFileModal.category}
+          transactionDescription={selectedFileModal.description}
+          onClose={() => setSelectedFileModal(null)}
+        />
+      )}
     </div>
   );
 };
