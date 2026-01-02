@@ -20,18 +20,23 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
     'image/png',
     'image/gif',
     'image/webp',
+    'image/bmp',
+    'image/tiff',
+    'image/tif',
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
   ];
 
   const handleFileSelect = async (e) => {
     const selectedFiles = Array.from(e.target.files);
     const validFiles = selectedFiles.filter(file => {
       if (!acceptedFormats.includes(file.type)) {
-        alert(`${file.name} is not a supported file type. Please upload images, PDFs, or documents.`);
+        alert(`${file.name} is not a supported file type. Supported formats: Images (JPG, PNG, GIF, WEBP, BMP, TIFF), PDF, Word, Excel, PowerPoint.`);
         return false;
       }
       if (file.size > 10 * 1024 * 1024) { // 10MB limit
@@ -145,7 +150,7 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
           <input
             type="file"
             multiple
-            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
             onChange={handleFileSelect}
             className="file-input"
             disabled={uploading || !transactionId}
@@ -212,7 +217,7 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
         <label className="file-upload-label">
           <Upload size={18} />
           <span>Attach Files (Optional)</span>
-          <span className="file-upload-hint">Images, PDFs, Documents (Max 10MB each)</span>
+          <span className="file-upload-hint">Images, PDFs, Word, Excel, PowerPoint (Max 10MB each)</span>
         </label>
         <input
           type="file"

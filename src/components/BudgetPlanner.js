@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, TrendingUp, AlertCircle } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Lightbulb, CheckCircle } from 'lucide-react';
 import { db } from '../utils/database';
 import './BudgetPlanner.css';
 
@@ -19,6 +19,7 @@ const BudgetPlanner = ({ transactions }) => {
     frequency: 'monthly',
     startDate: ''
   });
+  const [showRecommendations, setShowRecommendations] = useState(true);
 
   useEffect(() => {
     loadBudgets();
@@ -103,6 +104,73 @@ const BudgetPlanner = ({ transactions }) => {
     });
   }, [budgets, transactions]);
 
+  // Calculate recommended budgets based on spending patterns
+  const recommendedBudgets = useMemo(() => {
+    if (transactions.length === 0) return [];
+
+    // Get last 3 months of expense data
+    const now = new Date();
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    
+    const recentExpenses = transactions.filter(t => {
+      const date = new Date(t.date || t.createdAt);
+      return t.type === 'expense' && date >= threeMonthsAgo;
+    });
+
+    // Calculate average spending per category
+    const categorySpending = {};
+    const categoryCounts = {};
+    
+    recentExpenses.forEach(t => {
+      const category = t.category || 'Other';
+      categorySpending[category] = (categorySpending[category] || 0) + (t.amount || 0);
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+    });
+
+    // Generate recommendations (add 20% buffer for recommended budget)
+    const recommendations = Object.entries(categorySpending)
+      .map(([category, total]) => {
+        const months = Math.max(1, Math.floor((now - threeMonthsAgo) / (1000 * 60 * 60 * 24 * 30)));
+        const avgMonthly = total / months;
+        const recommended = Math.ceil(avgMonthly * 1.2); // 20% buffer
+        
+        // Only recommend if not already budgeted and spending is significant (>50€/month)
+        const alreadyBudgeted = budgets.some(b => b.category === category);
+        
+        return {
+          category,
+          recommendedAmount: recommended,
+          averageSpending: avgMonthly,
+          transactionCount: categoryCounts[category],
+          alreadyBudgeted
+        };
+      })
+      .filter(rec => !rec.alreadyBudgeted && rec.recommendedAmount >= 50)
+      .sort((a, b) => b.recommendedAmount - a.recommendedAmount)
+      .slice(0, 5); // Top 5 recommendations
+
+    return recommendations;
+  }, [transactions, budgets]);
+
+  const applyRecommendation = async (category, amount) => {
+    try {
+      if (db.budgets) {
+        await db.budgets.add({
+          category,
+          monthlyLimit: amount,
+          description: 'Recommended budget based on spending patterns',
+          createdAt: new Date().toISOString()
+        });
+        await loadBudgets();
+        // Show success message
+        alert(`Budget of €${amount.toFixed(2)} set for ${category}!`);
+      }
+    } catch (error) {
+      console.error('Error applying recommendation:', error);
+      alert('Error setting recommended budget. Please try again.');
+    }
+  };
+
   const categories = [
     'Fixed Expenses',
     'Food',
@@ -118,6 +186,53 @@ const BudgetPlanner = ({ transactions }) => {
 
   return (
     <div className="budget-planner">
+      {showRecommendations && recommendedBudgets.length > 0 && (
+        <div className="recommendations-card">
+          <div className="recommendations-header">
+            <h3>
+              <Lightbulb size={20} className="icon-inline" />
+              Recommended Budgets
+            </h3>
+            <button 
+              className="close-recommendations"
+              onClick={() => setShowRecommendations(false)}
+              title="Hide recommendations"
+            >
+              ×
+            </button>
+          </div>
+          <p className="recommendations-description">
+            Based on your spending patterns over the last 3 months, here are suggested budgets:
+          </p>
+          <div className="recommendations-list">
+            {recommendedBudgets.map((rec, index) => (
+              <div key={index} className="recommendation-item">
+                <div className="recommendation-info">
+                  <div className="recommendation-category">{rec.category}</div>
+                  <div className="recommendation-details">
+                    <span>Avg: €{rec.averageSpending.toFixed(2)}/month</span>
+                    <span>•</span>
+                    <span>{rec.transactionCount} transactions</span>
+                  </div>
+                </div>
+                <div className="recommendation-action">
+                  <div className="recommended-amount">
+                    Recommended: €{rec.recommendedAmount.toFixed(2)}
+                  </div>
+                  <button
+                    className="apply-recommendation-btn"
+                    onClick={() => applyRecommendation(rec.category, rec.recommendedAmount)}
+                  >
+                    <CheckCircle size={16} />
+                    Apply
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="planner-grid">
         <div className="planner-form-section">
           <div className="planner-card">

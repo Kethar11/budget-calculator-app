@@ -180,9 +180,145 @@
   font-size: 1rem;
 }
 
+.recommendations-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid #fbbf24;
+  margin-bottom: 30px;
+}
+
+.recommendations-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.recommendations-header h3 {
+  margin: 0;
+  color: #92400e;
+  font-size: 1.3rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.close-recommendations {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #92400e;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-recommendations:hover {
+  background: rgba(146, 64, 14, 0.1);
+}
+
+.recommendations-description {
+  color: #78350f;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recommendation-item {
+  background: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 2px solid #fbbf24;
+  transition: all 0.2s;
+}
+
+.recommendation-item:hover {
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+  transform: translateY(-2px);
+}
+
+.recommendation-info {
+  flex: 1;
+}
+
+.recommendation-category {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.recommendation-details {
+  display: flex;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #64748b;
+  align-items: center;
+}
+
+.recommendation-action {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.recommended-amount {
+  font-weight: 600;
+  color: #92400e;
+  font-size: 1rem;
+}
+
+.apply-recommendation-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.apply-recommendation-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
 @media (max-width: 768px) {
   .planner-grid {
     grid-template-columns: 1fr;
+  }
+
+  .recommendation-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .recommendation-action {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 

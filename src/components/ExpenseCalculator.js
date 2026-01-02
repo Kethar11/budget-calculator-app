@@ -43,6 +43,7 @@ const ExpenseCalculator = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expenseFiles, setExpenseFiles] = useState({});
   const [selectedFileModal, setSelectedFileModal] = useState(null); // { transactionId, files }
+  const [pendingFiles, setPendingFiles] = useState([]); // Files selected before expense creation
 
   useEffect(() => {
     loadExpenses();
@@ -85,7 +86,7 @@ const ExpenseCalculator = () => {
     }
 
     try {
-      await db.expenses.add({
+      const expenseId = await db.expenses.add({
         category: formData.category,
         subcategory: formData.subcategory || '',
         amount: parseFloat(formData.amount),
@@ -94,6 +95,20 @@ const ExpenseCalculator = () => {
         createdAt: new Date().toISOString(),
         files: []
       });
+
+      // Save pending files if any
+      if (pendingFiles.length > 0) {
+        const { saveFile } = await import('../utils/fileManager');
+        for (const file of pendingFiles) {
+          try {
+            await saveFile(file, expenseId, 'expense');
+          } catch (fileError) {
+            console.error('Error saving file:', fileError);
+          }
+        }
+        setPendingFiles([]);
+      }
+
       setFormData({
         category: '',
         subcategory: '',
@@ -105,6 +120,45 @@ const ExpenseCalculator = () => {
       console.error('Error adding expense:', error);
       alert('Error adding expense');
     }
+  };
+
+  const handleFileSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    const acceptedFormats = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/bmp',
+      'image/tiff',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+
+    const validFiles = selectedFiles.filter(file => {
+      if (!acceptedFormats.includes(file.type)) {
+        alert(`${file.name} is not a supported file type. Supported: Images (JPG, PNG, GIF, WEBP, BMP, TIFF), PDF, Word, Excel.`);
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        alert(`${file.name} is too large. Maximum file size is 10MB.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      setPendingFiles(prev => [...prev, ...validFiles]);
+    }
+    e.target.value = ''; // Reset input
+  };
+
+  const removePendingFile = (index) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const deleteExpense = async (id) => {
@@ -335,6 +389,51 @@ const ExpenseCalculator = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
                 />
+              </div>
+              <div className="form-group">
+                <label>Attach Bill/Receipt (Optional)</label>
+                <div className="file-upload-section-form">
+                  <label className="file-upload-label-form">
+                    <File size={18} />
+                    <span>Select Files</span>
+                    <span className="file-upload-hint-form">Images, PDFs, Documents (Max 10MB each)</span>
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                    onChange={handleFileSelect}
+                    className="file-input-form"
+                  />
+                </div>
+                {pendingFiles.length > 0 && (
+                  <div className="pending-files-list">
+                    <div className="pending-files-header">
+                      <span>{pendingFiles.length} file(s) selected</span>
+                    </div>
+                    <div className="pending-files-items">
+                      {pendingFiles.map((file, index) => (
+                        <div key={index} className="pending-file-item">
+                          <File size={14} />
+                          <span className="pending-file-name" title={file.name}>
+                            {file.name.length > 30 ? file.name.substring(0, 30) + '...' : file.name}
+                          </span>
+                          <span className="pending-file-size">
+                            {(file.size / 1024).toFixed(1)} KB
+                          </span>
+                          <button
+                            type="button"
+                            className="remove-file-btn"
+                            onClick={() => removePendingFile(index)}
+                            title="Remove file"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <button type="submit" className="submit-btn">Add Expense</button>
             </form>
