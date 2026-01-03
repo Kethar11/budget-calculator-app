@@ -37,8 +37,24 @@ A comprehensive financial management web application built with React. Features 
 
 - Node.js (v16 or higher)
 - npm or yarn
+- **OR** Docker and Docker Compose (for containerized deployment)
 
 ## Installation
+
+### Option 1: Docker (Recommended)
+
+```bash
+# Build and start all services
+docker-compose up --build
+
+# Access the application:
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8000
+```
+
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed Docker instructions.
+
+### Option 2: Local Development
 
 ```bash
 # Install dependencies

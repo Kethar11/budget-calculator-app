@@ -58,3 +58,86 @@
   margin-right: 6px;
 }
 
+.download-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.sync-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sync-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-status {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.sync-status.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #10b981;
+}
+
+.sync-status.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+
+.sheet-link {
+  margin-left: auto;
+  color: #3b82f6;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.sheet-link:hover {
+  color: #2563eb;
+}
+
+.excel-info {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.excel-info .excel-hint {
+  text-align: left;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.excel-info .excel-hint strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
