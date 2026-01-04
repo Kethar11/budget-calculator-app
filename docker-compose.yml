@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -10,7 +8,8 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/data:/app/data
-      - ./backend/budget_data.json:/app/budget_data.json
+      - ./backend/budget_data.xlsx:/app/budget_data.xlsx
+      - ./backend/backups:/app/backups
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
