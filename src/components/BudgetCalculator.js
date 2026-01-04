@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, TrendingUp, BarChart3, PieChart as PieChartIcon, Search, Trash2, File } from 'lucide-react';
+import { Calendar, TrendingUp, BarChart3, PieChart as PieChartIcon, Search, Trash2, File, Edit2 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { db } from '../utils/database';
 import BudgetForm from './BudgetForm';
@@ -26,6 +26,7 @@ const BudgetCalculator = () => {
   const [transactionTypeFilter, setTransactionTypeFilter] = useState('all'); // 'all', 'income', 'expense'
   const [transactionFiles, setTransactionFiles] = useState({});
   const [selectedFileModal, setSelectedFileModal] = useState(null); // { transactionId, files }
+  const [editingId, setEditingId] = useState(null); // ID of transaction being edited
 
   useEffect(() => {
     loadTransactions();
@@ -86,6 +87,28 @@ const BudgetCalculator = () => {
       await loadTransactions();
     } catch (error) {
       console.error('Error deleting transaction:', error);
+    }
+  };
+
+  const startEdit = (transaction) => {
+    setEditingId(transaction.id);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const updateTransaction = async (transaction) => {
+    try {
+      await db.transactions.update(editingId, {
+        ...transaction,
+        date: transaction.date || new Date().toISOString()
+      });
+      setEditingId(null);
+      await loadTransactions();
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw error;
     }
   };
 
@@ -212,7 +235,11 @@ const BudgetCalculator = () => {
     <div className="budget-calculator">
       <div className="calculator-grid">
         <div className="form-section">
-          <BudgetForm onAdd={addTransaction} />
+          <BudgetForm 
+            onAdd={editingId ? updateTransaction : addTransaction}
+            editingTransaction={editingId ? transactions.find(t => t.id === editingId) : null}
+            onCancel={editingId ? cancelEdit : null}
+          />
         </div>
         
         <div className="summary-section">
@@ -469,6 +496,25 @@ const BudgetCalculator = () => {
             header: 'Actions',
             render: (val, row) => (
               <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  className="edit-btn-table"
+                  onClick={() => startEdit(row)}
+                  style={{
+                    padding: '6px 10px',
+                    background: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '12px'
+                  }}
+                  title="Edit transaction"
+                >
+                  <Edit2 size={14} />
+                </button>
                 <FileUpload
                   transactionId={val}
                   transactionType="transaction"

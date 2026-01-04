@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Mail, Trash2, File, Search } from 'lucide-react';
+import { Mail, Trash2, File, Search, Edit2, X } from 'lucide-react';
 import TableView from './TableView';
 import DateRangePicker from './DateRangePicker';
 import FileUpload from './FileUpload';
@@ -46,6 +46,7 @@ const ExpenseCalculator = () => {
   const [expenseFiles, setExpenseFiles] = useState({});
   const [selectedFileModal, setSelectedFileModal] = useState(null); // { transactionId, files }
   const [pendingFiles, setPendingFiles] = useState([]); // Files selected before expense creation
+  const [editingId, setEditingId] = useState(null); // ID of expense being edited
 
   useEffect(() => {
     loadExpenses();
@@ -172,6 +173,54 @@ const ExpenseCalculator = () => {
       await loadExpenses();
     } catch (error) {
       console.error('Error deleting expense:', error);
+    }
+  };
+
+  const startEdit = (expense) => {
+    setEditingId(expense.id);
+    setFormData({
+      category: expense.category || '',
+      subcategory: expense.subcategory || '',
+      amount: expense.amount || '',
+      description: expense.description || ''
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setFormData({
+      category: '',
+      subcategory: '',
+      amount: '',
+      description: ''
+    });
+  };
+
+  const updateExpense = async (e) => {
+    e.preventDefault();
+    if (!formData.category || !formData.amount) {
+      alert('Please fill in category and amount');
+      return;
+    }
+
+    try {
+      await db.expenses.update(editingId, {
+        category: formData.category,
+        subcategory: formData.subcategory || '',
+        amount: parseFloat(formData.amount),
+        description: formData.description || ''
+      });
+      setEditingId(null);
+      setFormData({
+        category: '',
+        subcategory: '',
+        amount: '',
+        description: ''
+      });
+      await loadExpenses();
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      alert('Error updating expense');
     }
   };
 
@@ -343,8 +392,8 @@ const ExpenseCalculator = () => {
       <div className="expense-grid">
         <div className="expense-form-section">
           <div className="expense-form-card">
-            <h2>Add Expense</h2>
-            <form onSubmit={addExpense}>
+            <h2>{editingId ? 'Edit Expense' : 'Add Expense'}</h2>
+            <form onSubmit={editingId ? updateExpense : addExpense}>
               <div className="form-group">
                 <label>Category</label>
                 <select
@@ -437,7 +486,25 @@ const ExpenseCalculator = () => {
                   </div>
                 )}
               </div>
-              <button type="submit" className="submit-btn">Add Expense</button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="submit" className="submit-btn">
+                  {editingId ? 'Update Expense' : 'Add Expense'}
+                </button>
+                {editingId && (
+                  <button type="button" onClick={cancelEdit} className="cancel-btn" style={{
+                    padding: '10px 20px',
+                    background: '#e2e8f0',
+                    color: '#475569',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
         </div>
@@ -617,8 +684,27 @@ const ExpenseCalculator = () => {
             {
               key: 'id',
               header: 'Actions',
-              render: (val) => (
+              render: (val, row) => (
                 <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    className="edit-btn-table"
+                    onClick={() => startEdit(row)}
+                    style={{
+                      padding: '6px 10px',
+                      background: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '12px'
+                    }}
+                    title="Edit expense"
+                  >
+                    <Edit2 size={14} />
+                  </button>
                   <FileUpload
                     transactionId={val}
                     transactionType="expense"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { Trash2, Download, Search, File } from 'lucide-react';
+import { Trash2, Download, Search, File, Edit2 } from 'lucide-react';
 import { db } from '../utils/database';
 import TableView from './TableView';
 import DateRangePicker from './DateRangePicker';
@@ -30,6 +30,7 @@ const SavingsCalculator = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [savingsFiles, setSavingsFiles] = useState({});
   const [selectedFileModal, setSelectedFileModal] = useState(null); // { transactionId, files }
+  const [editingId, setEditingId] = useState(null); // ID of savings being edited
 
   useEffect(() => {
     loadSavings();
@@ -105,6 +106,61 @@ const SavingsCalculator = () => {
       await loadSavings();
     } catch (error) {
       console.error('Error deleting savings:', error);
+    }
+  };
+
+  const startEdit = (saving) => {
+    setEditingId(saving.id);
+    setFormData({
+      accountType: saving.accountType || '',
+      amount: saving.amount || '',
+      date: saving.date ? new Date(saving.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      maturityDate: saving.maturityDate ? new Date(saving.maturityDate).toISOString().split('T')[0] : '',
+      interestRate: saving.interestRate || '',
+      description: saving.description || ''
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setFormData({
+      accountType: '',
+      amount: '',
+      date: new Date().toISOString().split('T')[0],
+      maturityDate: '',
+      interestRate: '',
+      description: ''
+    });
+  };
+
+  const updateSavings = async (e) => {
+    e.preventDefault();
+    if (!formData.accountType || !formData.amount || !formData.date) {
+      alert('Please fill in account type, amount, and date');
+      return;
+    }
+
+    try {
+      await db.savings.update(editingId, {
+        ...formData,
+        amount: parseFloat(formData.amount),
+        interestRate: parseFloat(formData.interestRate) || 0,
+        date: formData.date,
+        maturityDate: formData.maturityDate || ''
+      });
+      setEditingId(null);
+      setFormData({
+        accountType: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        maturityDate: '',
+        interestRate: '',
+        description: ''
+      });
+      await loadSavings();
+    } catch (error) {
+      console.error('Error updating savings:', error);
+      alert('Error updating savings');
     }
   };
 
@@ -216,8 +272,8 @@ const SavingsCalculator = () => {
       <div className="savings-grid">
         <div className="savings-form-section">
           <div className="savings-form-card">
-            <h2>Add Savings</h2>
-            <form onSubmit={addSavings}>
+            <h2>{editingId ? 'Edit Savings' : 'Add Savings'}</h2>
+            <form onSubmit={editingId ? updateSavings : addSavings}>
               <div className="form-group">
                 <label>Account Type</label>
                 <select
@@ -279,7 +335,25 @@ const SavingsCalculator = () => {
                   placeholder="e.g., Dad's savings account"
                 />
               </div>
-              <button type="submit" className="submit-btn">Add Savings</button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="submit" className="submit-btn">
+                  {editingId ? 'Update Savings' : 'Add Savings'}
+                </button>
+                {editingId && (
+                  <button type="button" onClick={cancelEdit} className="cancel-btn" style={{
+                    padding: '10px 20px',
+                    background: '#e2e8f0',
+                    color: '#475569',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
         </div>
@@ -448,8 +522,27 @@ const SavingsCalculator = () => {
             {
               key: 'id',
               header: 'Actions',
-              render: (val) => (
+              render: (val, row) => (
                 <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    className="edit-btn-table"
+                    onClick={() => startEdit(row)}
+                    style={{
+                      padding: '6px 10px',
+                      background: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '12px'
+                    }}
+                    title="Edit savings"
+                  >
+                    <Edit2 size={14} />
+                  </button>
                   <FileUpload
                     transactionId={val}
                     transactionType="savings"

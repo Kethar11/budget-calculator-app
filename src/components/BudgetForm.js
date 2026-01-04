@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Calendar, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, X } from 'lucide-react';
 import './BudgetForm.css';
 
-const BudgetForm = ({ onAdd }) => {
+const BudgetForm = ({ onAdd, editingTransaction, onCancel }) => {
   const [formData, setFormData] = useState({
     type: 'expense',
     category: '',
@@ -12,6 +12,31 @@ const BudgetForm = ({ onAdd }) => {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().slice(0, 5)
   });
+
+  useEffect(() => {
+    if (editingTransaction) {
+      const date = new Date(editingTransaction.date || editingTransaction.createdAt);
+      setFormData({
+        type: editingTransaction.type || 'expense',
+        category: editingTransaction.category || '',
+        subcategory: editingTransaction.subcategory || '',
+        amount: editingTransaction.amount || '',
+        description: editingTransaction.description || '',
+        date: date.toISOString().split('T')[0],
+        time: date.toTimeString().slice(0, 5)
+      });
+    } else {
+      setFormData({
+        type: 'expense',
+        category: '',
+        subcategory: '',
+        amount: '',
+        description: '',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0, 5)
+      });
+    }
+  }, [editingTransaction]);
 
   const categories = {
     income: ['Salary', 'Freelance', 'Investment', 'Bonus', 'Rental Income', 'Other'],
@@ -114,17 +139,19 @@ const BudgetForm = ({ onAdd }) => {
         amount: parseFloat(formData.amount),
         date: dateTime.toISOString()
       });
-      setFormData({
-        type: 'expense',
-        category: '',
-        subcategory: '',
-        amount: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toTimeString().slice(0, 5)
-      });
+      if (!editingTransaction) {
+        setFormData({
+          type: 'expense',
+          category: '',
+          subcategory: '',
+          amount: '',
+          description: '',
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().slice(0, 5)
+        });
+      }
     } catch (error) {
-      alert('Error adding transaction');
+      alert(editingTransaction ? 'Error updating transaction' : 'Error adding transaction');
     }
   };
 
@@ -139,7 +166,30 @@ const BudgetForm = ({ onAdd }) => {
 
   return (
     <div className="budget-form-card">
-      <h2>Add Transaction</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>{editingTransaction ? 'Edit Transaction' : 'Add Transaction'}</h2>
+        {editingTransaction && onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              padding: '8px 12px',
+              background: '#e2e8f0',
+              color: '#475569',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '14px'
+            }}
+          >
+            <X size={16} />
+            Cancel
+          </button>
+        )}
+      </div>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Type</label>
@@ -254,7 +304,9 @@ const BudgetForm = ({ onAdd }) => {
           />
         </div>
 
-        <button type="submit" className="submit-btn">Add Transaction</button>
+        <button type="submit" className="submit-btn">
+          {editingTransaction ? 'Update Transaction' : 'Add Transaction'}
+        </button>
       </form>
     </div>
   );

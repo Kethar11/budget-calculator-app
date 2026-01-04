@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Plus, Trash2, Wallet, CheckCircle, ExternalLink, Link as LinkIcon } from 'lucide-react';
+import { Target, Plus, Trash2, Wallet, CheckCircle, ExternalLink, Link as LinkIcon, Edit2, X } from 'lucide-react';
 import { db } from '../utils/database';
 import { useCurrency } from '../contexts/CurrencyContext';
 import './BuyingGoals.css';
@@ -23,6 +23,7 @@ const BuyingGoals = () => {
     amount: '',
     account: ''
   });
+  const [editingId, setEditingId] = useState(null); // ID of goal being edited
 
   useEffect(() => {
     loadGoals();
@@ -128,6 +129,60 @@ const BuyingGoals = () => {
     }
   };
 
+  const startEdit = (goal) => {
+    setEditingId(goal.id);
+    setShowForm(true);
+    setFormData({
+      name: goal.name || '',
+      targetAmount: goal.targetAmount || '',
+      goalType: getGoalTypeInfo(goal.targetAmount).type,
+      category: goal.category || '',
+      account: goal.account || '',
+      description: goal.description || '',
+      link: goal.link || ''
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setShowForm(false);
+    setFormData({
+      name: '',
+      targetAmount: '',
+      goalType: 'small',
+      category: '',
+      account: '',
+      description: '',
+      link: ''
+    });
+  };
+
+  const updateGoal = async (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.targetAmount) {
+      alert('Please fill in goal name and target amount');
+      return;
+    }
+
+    try {
+      const goalTypeInfo = getGoalTypeInfo(formData.targetAmount);
+      await db.goals.update(editingId, {
+        name: formData.name,
+        targetAmount: parseFloat(formData.targetAmount),
+        goalType: goalTypeInfo.type,
+        category: formData.category || '',
+        account: formData.account || '',
+        description: formData.description || '',
+        link: formData.link || ''
+      });
+      cancelEdit();
+      await loadGoals();
+    } catch (error) {
+      console.error('Error updating goal:', error);
+      alert('Error updating goal');
+    }
+  };
+
   const goalTypes = ['small', 'medium', 'large'];
   const filteredGoals = useMemo(() => {
     return goals;
@@ -193,8 +248,29 @@ const BuyingGoals = () => {
 
       {showForm && (
         <div className="goal-form-card">
-          <h3>Add New Goal</h3>
-          <form onSubmit={addGoal}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3>{editingId ? 'Edit Goal' : 'Add New Goal'}</h3>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              style={{
+                padding: '6px 12px',
+                background: '#e2e8f0',
+                color: '#475569',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '14px'
+              }}
+            >
+              <X size={16} />
+              Cancel
+            </button>
+          </div>
+          <form onSubmit={editingId ? updateGoal : addGoal}>
             <div className="form-row">
               <div className="form-group">
                 <label>Goal Name *</label>
@@ -275,8 +351,9 @@ const BuyingGoals = () => {
               </p>
             </div>
             <div className="form-actions">
-              <button type="submit" className="submit-btn">Add Goal</button>
-              <button type="button" className="cancel-btn" onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="submit" className="submit-btn">
+                {editingId ? 'Update Goal' : 'Add Goal'}
+              </button>
             </div>
           </form>
         </div>
@@ -314,6 +391,25 @@ const BuyingGoals = () => {
                           {goal.category && <span className="goal-category">{goal.category}</span>}
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            className="edit-goal-btn"
+                            onClick={() => startEdit(goal)}
+                            title="Edit goal"
+                            style={{
+                              padding: '6px 10px',
+                              background: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '12px'
+                            }}
+                          >
+                            <Edit2 size={14} />
+                          </button>
                           {goal.link && (
                             <a
                               href={goal.link}
