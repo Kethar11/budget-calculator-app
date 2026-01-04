@@ -9,9 +9,7 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
   margin-bottom: 40px;
-  padding: 15px 0;
-  overflow: hidden;
-  position: relative;
+  padding: 20px;
   width: 100%;
   margin-left: -20px;
   margin-right: -20px;
@@ -19,45 +17,80 @@
   border-radius: 16px 16px 0 0;
 }
 
-.marquee-container {
-  width: 100%;
-  overflow: hidden;
-  position: relative;
-  white-space: nowrap;
+.header-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-.marquee-content {
-  display: inline-flex;
+.stat-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
   align-items: center;
-  gap: 30px;
-  animation: marquee 60s linear infinite;
-  font-size: 1rem;
-  color: white;
+  gap: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 4px;
   font-weight: 500;
-  padding: 0 20px;
 }
 
-.marquee-content span {
-  display: inline-block;
-  white-space: nowrap;
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
 }
 
-.marquee-content span:not(:has-text('•')) {
-  opacity: 0.95;
+.stat-value.positive {
+  color: #10b981;
 }
 
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
+.stat-value.negative {
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .header-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
-  100% {
-    transform: translateX(-50%);
+  
+  .stat-card {
+    padding: 12px 16px;
   }
-}
-
-/* Pause animation on hover */
-.marquee-container:hover .marquee-content {
-  animation-play-state: paused;
+  
+  .stat-icon {
+    font-size: 1.5rem;
+  }
+  
+  .stat-value {
+    font-size: 1.2rem;
+  }
 }
 
 .main-container {

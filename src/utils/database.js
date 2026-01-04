@@ -87,5 +87,18 @@ db.version(5).stores({
   });
 });
 
+// Version 6 - Add buying goals
+db.version(6).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt, files',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt, files',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt, files',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt',
+  files: '++id, transactionId, transactionType, fileName, fileType, fileSize, fileData, uploadedAt',
+  goals: '++id, name, targetAmount, currentAmount, goalType, category, account, description, createdAt, contributions'
+}).upgrade(async tx => {
+  // Migration for version 6 - no data migration needed
+});
+
 export { db };
 

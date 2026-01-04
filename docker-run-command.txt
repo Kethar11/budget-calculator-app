@@ -1,0 +1,10 @@
+# Copy and paste this command once Docker Desktop is running:
+
+docker-compose up --build
+
+# Or run in background:
+docker-compose up --build -d
+
+# Then access:
+# Frontend: http://localhost:3000
+# Backend: http://localhost:8000

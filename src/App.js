@@ -4,6 +4,7 @@ import './App.css';
 import BudgetCalculator from './components/BudgetCalculator';
 import SavingsCalculator from './components/SavingsCalculator';
 import ExpenseCalculator from './components/ExpenseCalculator';
+import BuyingGoals from './components/BuyingGoals';
 import FileBin from './components/FileBin';
 import Navigation from './components/Navigation';
 
@@ -61,55 +62,36 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <div className="marquee-container">
-          <div className="marquee-content">
-            <span>💰 Complete Financial Calculator</span>
-            <span>•</span>
-            <span>💵 Total Balance: €{realTimeStats.totalBalance.toFixed(2)}</span>
-            <span>•</span>
-            <span>📈 Total Income: €{realTimeStats.totalIncome.toFixed(2)}</span>
-            <span>•</span>
-            <span>💸 Total Expenses: €{realTimeStats.totalExpenses.toFixed(2)}</span>
-            <span>•</span>
-            <span>🏦 Total Savings: €{realTimeStats.totalSavings.toFixed(2)}</span>
-            <span>•</span>
-            <span>📊 Expense Records: €{realTimeStats.totalExpenseAmount.toFixed(2)}</span>
-            <span>•</span>
-            <span>📁 File Attachments</span>
-            <span>•</span>
-            <span>📈 Beautiful Charts</span>
-            <span>•</span>
-            <span>📊 Excel Export</span>
-            <span>•</span>
-            <span>🔍 Advanced Filtering</span>
-            <span>•</span>
-            <span>💾 100% Local Storage</span>
-            <span>•</span>
-            <span>🔒 Secure & Private</span>
-            <span>•</span>
-            <span>💰 Complete Financial Calculator</span>
-            <span>•</span>
-            <span>💵 Total Balance: €{realTimeStats.totalBalance.toFixed(2)}</span>
-            <span>•</span>
-            <span>📈 Total Income: €{realTimeStats.totalIncome.toFixed(2)}</span>
-            <span>•</span>
-            <span>💸 Total Expenses: €{realTimeStats.totalExpenses.toFixed(2)}</span>
-            <span>•</span>
-            <span>🏦 Total Savings: €{realTimeStats.totalSavings.toFixed(2)}</span>
-            <span>•</span>
-            <span>📊 Expense Records: €{realTimeStats.totalExpenseAmount.toFixed(2)}</span>
-            <span>•</span>
-            <span>📁 File Attachments</span>
-            <span>•</span>
-            <span>📈 Beautiful Charts</span>
-            <span>•</span>
-            <span>📊 Excel Export</span>
-            <span>•</span>
-            <span>🔍 Advanced Filtering</span>
-            <span>•</span>
-            <span>💾 100% Local Storage</span>
-            <span>•</span>
-            <span>🔒 Secure & Private</span>
+        <div className="header-stats">
+          <div className="stat-card">
+            <div className="stat-icon">💵</div>
+            <div className="stat-info">
+              <div className="stat-label">Total Balance</div>
+              <div className={`stat-value ${realTimeStats.totalBalance >= 0 ? 'positive' : 'negative'}`}>
+                €{realTimeStats.totalBalance.toFixed(2)}
+              </div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">📈</div>
+            <div className="stat-info">
+              <div className="stat-label">Total Income</div>
+              <div className="stat-value positive">€{realTimeStats.totalIncome.toFixed(2)}</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">💸</div>
+            <div className="stat-info">
+              <div className="stat-label">Total Expenses</div>
+              <div className="stat-value negative">€{realTimeStats.totalExpenses.toFixed(2)}</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">🏦</div>
+            <div className="stat-info">
+              <div className="stat-label">Total Savings</div>
+              <div className="stat-value positive">€{realTimeStats.totalSavings.toFixed(2)}</div>
+            </div>
           </div>
         </div>
       </header>
@@ -121,6 +103,7 @@ function App() {
           {activeTab === 'budget' && <BudgetCalculator />}
           {activeTab === 'savings' && <SavingsCalculator />}
           {activeTab === 'expense' && <ExpenseCalculator />}
+          {activeTab === 'goals' && <BuyingGoals />}
           {activeTab === 'bin' && <FileBin />}
         </div>
       </div>

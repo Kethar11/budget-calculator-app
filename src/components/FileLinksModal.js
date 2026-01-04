@@ -3,7 +3,7 @@ import { X, File, Image, FileText, Download, Eye, ExternalLink } from 'lucide-re
 import { downloadFile, isImageFile, isPDFFile } from '../utils/fileManager';
 import './FileLinksModal.css';
 
-const FileLinksModal = ({ files, onClose, transactionType, transactionId }) => {
+const FileLinksModal = ({ files, onClose, transactionType, transactionId, transactionCategory, transactionDescription }) => {
   if (!files || files.length === 0) {
     return null;
   }
@@ -67,7 +67,9 @@ const FileLinksModal = ({ files, onClose, transactionType, transactionId }) => {
         : transactionDescription;
       path += ` / ${shortDesc}`;
     }
-    path += ` / Transaction #${transactionId}`;
+    if (transactionId) {
+      path += ` / Transaction #${transactionId}`;
+    }
     return path;
   };
 
