@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { List, BarChart3 } from 'lucide-react';
 import './TableView.css';
 
-const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage, chartContent }) => {
+const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage, chartContent, onRowClick }) => {
+  const [selectedRowId, setSelectedRowId] = useState(null);
   if (data.length === 0) {
     return (
       <div className="table-view-container">
@@ -64,15 +65,29 @@ const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage,
                 </tr>
               </thead>
               <tbody>
-                {data.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
-                    {columns.map((col, colIndex) => (
-                      <td key={colIndex}>
-                        {col.render ? col.render(row[col.key], row) : row[col.key]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+                {data.map((row, rowIndex) => {
+                  const rowId = row.id || rowIndex;
+                  const isSelected = selectedRowId === rowId;
+                  return (
+                    <tr 
+                      key={rowIndex}
+                      className={isSelected ? 'selected-row' : ''}
+                      onClick={() => {
+                        setSelectedRowId(rowId);
+                        if (onRowClick) {
+                          onRowClick(row);
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {columns.map((col, colIndex) => (
+                        <td key={colIndex}>
+                          {col.render ? col.render(row[col.key], row) : row[col.key]}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

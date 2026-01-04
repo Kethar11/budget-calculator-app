@@ -247,7 +247,7 @@ const BuyingGoals = () => {
       </div>
 
       {showForm && (
-        <div className="goal-form-card">
+        <div className={`goal-form-card ${editingId ? 'editing' : ''}`}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3>{editingId ? 'Edit Goal' : 'Add New Goal'}</h3>
             <button

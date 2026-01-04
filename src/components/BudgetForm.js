@@ -165,7 +165,7 @@ const BudgetForm = ({ onAdd, editingTransaction, onCancel }) => {
   };
 
   return (
-    <div className="budget-form-card">
+    <div className={`budget-form-card ${editingTransaction ? 'editing' : ''}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>{editingTransaction ? 'Edit Transaction' : 'Add Transaction'}</h2>
         {editingTransaction && onCancel && (

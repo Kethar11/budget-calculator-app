@@ -287,7 +287,7 @@ const SavingsCalculator = () => {
     <div className="savings-calculator">
       <div className="savings-grid">
         <div className="savings-form-section">
-          <div className="savings-form-card">
+          <div className={`savings-form-card ${editingId ? 'editing' : ''}`}>
             <h2>{editingId ? 'Edit Savings' : 'Add Savings'}</h2>
             <form onSubmit={editingId ? updateSavings : addSavings}>
               <div className="form-group">

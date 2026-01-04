@@ -101,6 +101,21 @@
   background: #f8fafc;
 }
 
+.data-table tbody tr.selected-row {
+  background: #e0e7ff !important;
+  border-left: 4px solid #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 234, 0.2);
+}
+
+.data-table tbody tr.selected-row:hover {
+  background: #c7d2fe !important;
+}
+
+.data-table tbody tr.selected-row td {
+  font-weight: 500;
+  color: #1e293b;
+}
+
 .data-table tbody tr:last-child td {
   border-bottom: none;
 }

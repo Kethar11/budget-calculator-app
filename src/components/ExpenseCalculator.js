@@ -398,7 +398,7 @@ const ExpenseCalculator = () => {
     <div className="expense-calculator">
       <div className="expense-grid">
         <div className="expense-form-section">
-          <div className="expense-form-card">
+          <div className={`expense-form-card ${editingId ? 'editing' : ''}`}>
             <h2>{editingId ? 'Edit Expense' : 'Add Expense'}</h2>
             <form onSubmit={editingId ? updateExpense : addExpense}>
               <div className="form-group">
