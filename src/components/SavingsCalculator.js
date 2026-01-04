@@ -7,10 +7,12 @@ import DateRangePicker from './DateRangePicker';
 import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
+import { useCurrency } from '../contexts/CurrencyContext';
 import * as XLSX from 'xlsx';
 import './SavingsCalculator.css';
 
 const SavingsCalculator = () => {
+  const { formatAmount } = useCurrency();
   const [savings, setSavings] = useState([]);
   const [formData, setFormData] = useState({
     accountType: '',
@@ -230,7 +232,7 @@ const SavingsCalculator = () => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Amount (€)</label>
+                <label>Amount</label>
                 <input
                   type="number"
                   step="0.01"
@@ -288,7 +290,7 @@ const SavingsCalculator = () => {
             <div className="summary-stats">
               <div className="stat-item">
                 <div className="stat-label">Total Savings</div>
-                <div className="stat-value positive">€{totalSavings.toFixed(2)}</div>
+                <div className="stat-value positive">{formatAmount(totalSavings)}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-label">Number of Deposits</div>
@@ -297,7 +299,7 @@ const SavingsCalculator = () => {
               <div className="stat-item">
                 <div className="stat-label">Average Deposit</div>
                 <div className="stat-value">
-                  €{filteredSavings.length > 0 ? (totalSavings / filteredSavings.length).toFixed(2) : '0.00'}
+                  {formatAmount(filteredSavings.length > 0 ? (totalSavings / filteredSavings.length) : 0)}
                 </div>
               </div>
               <div className="stat-item">
@@ -438,7 +440,7 @@ const SavingsCalculator = () => {
                 </button>
               );
             }},
-            { key: 'amount', header: 'Amount (€)', render: (val) => `€${val.toFixed(2)}` },
+            { key: 'amount', header: 'Amount', render: (val) => formatAmount(val) },
             { key: 'formattedDate', header: 'Deposit Date' },
             { key: 'formattedMaturityDate', header: 'Maturity Date' },
             { key: 'interestRate', header: 'Interest (%)', render: (val) => val ? `${val}%` : 'N/A' },

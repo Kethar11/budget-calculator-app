@@ -100,5 +100,57 @@ db.version(6).stores({
   // Migration for version 6 - no data migration needed
 });
 
+// Version 7 - Add currency settings
+db.version(7).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt, files',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt, files',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt, files',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt',
+  files: '++id, transactionId, transactionType, fileName, fileType, fileSize, fileData, uploadedAt',
+  goals: '++id, name, targetAmount, currentAmount, goalType, category, account, description, createdAt, contributions',
+  settings: '++id, key, value, updatedAt'
+}).upgrade(async tx => {
+  // Set default currency settings
+  const settingsTable = tx.table('settings');
+  await settingsTable.put({ id: 1, key: 'currency', value: 'EUR', updatedAt: new Date().toISOString() });
+  await settingsTable.put({ id: 2, key: 'eurToInrRate', value: 105, updatedAt: new Date().toISOString() });
+});
+
+// Version 8 - Add reminders
+db.version(8).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt, files',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt, files',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt, files',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt',
+  files: '++id, transactionId, transactionType, fileName, fileType, fileSize, fileData, uploadedAt',
+  goals: '++id, name, targetAmount, currentAmount, goalType, category, account, description, createdAt, contributions',
+  settings: '++id, key, value, updatedAt',
+  reminders: '++id, title, description, reminderDate, reminderTime, priority, isCompleted, createdAt, updatedAt'
+}).upgrade(async tx => {
+  // Migration for version 8 - no data migration needed
+});
+
+// Version 9 - Add link field to goals
+db.version(9).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt, files',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt, files',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt, files',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt',
+  files: '++id, transactionId, transactionType, fileName, fileType, fileSize, fileData, uploadedAt',
+  goals: '++id, name, targetAmount, currentAmount, goalType, category, account, description, link, createdAt, contributions',
+  settings: '++id, key, value, updatedAt',
+  reminders: '++id, title, description, reminderDate, reminderTime, priority, isCompleted, createdAt, updatedAt'
+}).upgrade(async tx => {
+  // Add link field to existing goals
+  await tx.table('goals').toCollection().modify(goal => {
+    if (!goal.link) {
+      goal.link = '';
+    }
+  });
+});
+
 export { db };
 

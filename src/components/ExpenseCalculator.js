@@ -5,6 +5,7 @@ import DateRangePicker from './DateRangePicker';
 import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
+import { useCurrency } from '../contexts/CurrencyContext';
 import {
   PieChart,
   Pie,
@@ -28,6 +29,7 @@ import './ExpenseCalculator.css';
 const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#10b981'];
 
 const ExpenseCalculator = () => {
+  const { formatAmount } = useCurrency();
   const [expenses, setExpenses] = useState([]);
   const [formData, setFormData] = useState({
     category: '',
@@ -371,7 +373,7 @@ const ExpenseCalculator = () => {
                 </div>
               )}
               <div className="form-group">
-                <label>Amount (€)</label>
+                <label>Amount</label>
                 <input
                   type="number"
                   step="0.01"
@@ -446,7 +448,7 @@ const ExpenseCalculator = () => {
             <div className="summary-stats">
               <div className="stat-item">
                 <div className="stat-label">Total Expenses</div>
-                <div className="stat-value negative">€{totalExpenses.toFixed(2)}</div>
+                <div className="stat-value negative">{formatAmount(totalExpenses)}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-label">Number of Expenses</div>
@@ -454,7 +456,7 @@ const ExpenseCalculator = () => {
               </div>
               <div className="stat-item">
                 <div className="stat-label">Average Expense</div>
-                <div className="stat-value">€{averageExpense.toFixed(2)}</div>
+                <div className="stat-value">{formatAmount(averageExpense)}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-label">Top Category</div>
@@ -611,7 +613,7 @@ const ExpenseCalculator = () => {
             }},
             { key: 'formattedDate', header: 'Date' },
             { key: 'formattedTime', header: 'Time' },
-            { key: 'amount', header: 'Amount (€)', render: (val) => `€${val.toFixed(2)}` },
+            { key: 'amount', header: 'Amount', render: (val) => formatAmount(val) },
             {
               key: 'id',
               header: 'Actions',
@@ -665,7 +667,7 @@ const ExpenseCalculator = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value) => formatAmount(value)} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -676,7 +678,7 @@ const ExpenseCalculator = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
-                      <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value) => formatAmount(value)} />
                       <Line type="monotone" dataKey="amount" stroke="#ef4444" strokeWidth={3} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -688,7 +690,7 @@ const ExpenseCalculator = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value) => formatAmount(value)} />
                       <Bar dataKey="value" fill="#ef4444" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -700,7 +702,7 @@ const ExpenseCalculator = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="day" />
                       <YAxis />
-                      <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value) => formatAmount(value)} />
                       <Area type="monotone" dataKey="amount" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
                     </AreaChart>
                   </ResponsiveContainer>

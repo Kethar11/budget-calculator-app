@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Plus, Trash2, TrendingUp, Wallet, CheckCircle } from 'lucide-react';
+import { Target, Plus, Trash2, Wallet, CheckCircle, ExternalLink, Link as LinkIcon } from 'lucide-react';
 import { db } from '../utils/database';
+import { useCurrency } from '../contexts/CurrencyContext';
 import './BuyingGoals.css';
 
 const BuyingGoals = () => {
+  const { formatAmount } = useCurrency();
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -13,7 +15,8 @@ const BuyingGoals = () => {
     goalType: 'small',
     category: '',
     account: '',
-    description: ''
+    description: '',
+    link: ''
   });
   const [contributionForm, setContributionForm] = useState({
     goalId: null,
@@ -60,6 +63,7 @@ const BuyingGoals = () => {
         category: formData.category || '',
         account: formData.account || '',
         description: formData.description || '',
+        link: formData.link || '',
         createdAt: new Date().toISOString(),
         contributions: []
       });
@@ -69,7 +73,8 @@ const BuyingGoals = () => {
         goalType: 'small',
         category: '',
         account: '',
-        description: ''
+        description: '',
+        link: ''
       });
       setShowForm(false);
       await loadGoals();
@@ -155,7 +160,7 @@ const BuyingGoals = () => {
         <div className="goals-title-section">
           <h2>
             <Target size={24} className="icon-inline" />
-            Buying Goals
+            Goals
           </h2>
           <p className="goals-subtitle">Track your purchase goals and savings progress</p>
         </div>
@@ -168,15 +173,15 @@ const BuyingGoals = () => {
       <div className="goals-summary">
         <div className="summary-card">
           <div className="summary-label">Total Goals Value</div>
-          <div className="summary-value">€{totalGoalsValue.toFixed(2)}</div>
+          <div className="summary-value">{formatAmount(totalGoalsValue)}</div>
         </div>
         <div className="summary-card">
           <div className="summary-label">Total Saved</div>
-          <div className="summary-value positive">€{totalSaved.toFixed(2)}</div>
+          <div className="summary-value positive">{formatAmount(totalSaved)}</div>
         </div>
         <div className="summary-card">
           <div className="summary-label">Remaining</div>
-          <div className="summary-value">€{(totalGoalsValue - totalSaved).toFixed(2)}</div>
+          <div className="summary-value">{formatAmount(totalGoalsValue - totalSaved)}</div>
         </div>
         <div className="summary-card">
           <div className="summary-label">Progress</div>
@@ -202,7 +207,7 @@ const BuyingGoals = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Target Amount (€) *</label>
+                <label>Target Amount *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -254,6 +259,21 @@ const BuyingGoals = () => {
                 rows="3"
               />
             </div>
+            <div className="form-group">
+              <label>
+                <LinkIcon size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                Reference Link (URL)
+              </label>
+              <input
+                type="url"
+                value={formData.link}
+                onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                placeholder="https://example.com/product-link"
+              />
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                Add a link to where you can buy this item (Amazon, store website, etc.)
+              </p>
+            </div>
             <div className="form-actions">
               <button type="submit" className="submit-btn">Add Goal</button>
               <button type="button" className="cancel-btn" onClick={() => setShowForm(false)}>Cancel</button>
@@ -265,10 +285,11 @@ const BuyingGoals = () => {
       <div className="goals-by-type">
         {['small', 'medium', 'large'].map(type => {
           const typeInfo = {
-            small: { label: 'Small Goals', color: '#10b981', icon: '🎯' },
-            medium: { label: 'Medium Goals', color: '#f59e0b', icon: '🎯' },
-            large: { label: 'Large Goals', color: '#ef4444', icon: '🎯' }
+            small: { label: 'Small Goals', color: '#10b981', icon: Target },
+            medium: { label: 'Medium Goals', color: '#f59e0b', icon: Target },
+            large: { label: 'Large Goals', color: '#ef4444', icon: Target }
           }[type];
+          const TypeIcon = typeInfo.icon;
 
           const typeGoals = goalsByType[type] || [];
 
@@ -277,7 +298,8 @@ const BuyingGoals = () => {
           return (
             <div key={type} className="goal-type-section">
               <h3 className="goal-type-header" style={{ borderLeftColor: typeInfo.color }}>
-                {typeInfo.icon} {typeInfo.label} ({typeGoals.length})
+                <TypeIcon size={20} style={{ marginRight: '8px', verticalAlign: 'middle', color: typeInfo.color }} />
+                {typeInfo.label} ({typeGoals.length})
               </h3>
               <div className="goals-grid">
                 {typeGoals.map(goal => {
@@ -291,29 +313,44 @@ const BuyingGoals = () => {
                           <h4>{goal.name}</h4>
                           {goal.category && <span className="goal-category">{goal.category}</span>}
                         </div>
-                        <button
-                          className="delete-goal-btn"
-                          onClick={() => deleteGoal(goal.id)}
-                          title="Delete goal"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          {goal.link && (
+                            <a
+                              href={goal.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="goal-link-btn"
+                              title="Open product link"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink size={16} />
+                              <span>View Link</span>
+                            </a>
+                          )}
+                          <button
+                            className="delete-goal-btn"
+                            onClick={() => deleteGoal(goal.id)}
+                            title="Delete goal"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="goal-amounts">
                         <div className="goal-amount-row">
                           <span>Target:</span>
-                          <strong>€{goal.targetAmount.toFixed(2)}</strong>
+                          <strong>{formatAmount(goal.targetAmount)}</strong>
                         </div>
                         <div className="goal-amount-row">
                           <span>Saved:</span>
                           <strong className={goal.currentAmount >= goal.targetAmount ? 'positive' : ''}>
-                            €{goal.currentAmount.toFixed(2)}
+                            {formatAmount(goal.currentAmount)}
                           </strong>
                         </div>
                         <div className="goal-amount-row">
                           <span>Remaining:</span>
-                          <strong>€{Math.max(0, goal.targetAmount - goal.currentAmount).toFixed(2)}</strong>
+                          <strong>{formatAmount(Math.max(0, goal.targetAmount - goal.currentAmount))}</strong>
                         </div>
                       </div>
 
@@ -385,7 +422,7 @@ const BuyingGoals = () => {
                           <div className="contributions-header">Contributions:</div>
                           {goal.contributions.slice(-5).map((contrib, idx) => (
                             <div key={idx} className="contribution-item">
-                              <span>€{contrib.amount.toFixed(2)}</span>
+                              <span>{formatAmount(contrib.amount)}</span>
                               {contrib.account && <span className="contrib-account">{contrib.account}</span>}
                               <span className="contrib-date">
                                 {new Date(contrib.date).toLocaleDateString()}

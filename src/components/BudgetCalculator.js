@@ -10,11 +10,13 @@ import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/file
 import BudgetPlanner from './BudgetPlanner';
 import ExcelExport from './ExcelExport';
 import DateRangePicker from './DateRangePicker';
+import { useCurrency } from '../contexts/CurrencyContext';
 import './BudgetCalculator.css';
 
 const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b', '#fa709a', '#fee140', '#30cfd0', '#330867'];
 
 const BudgetCalculator = () => {
+  const { formatAmount, formatAmountWithSign } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chartView, setChartView] = useState('monthly'); // monthly, weekly, yearly
@@ -218,19 +220,19 @@ const BudgetCalculator = () => {
             <h2>Budget Summary</h2>
             <div className="summary-stats">
               <div className="stat-item income-stat">
-                <div className="stat-label">Total Income</div>
-                <div className="stat-value positive">€{summary.income.toFixed(2)}</div>
+              <div className="stat-label">Total Income</div>
+              <div className="stat-value positive">{formatAmount(summary.income)}</div>
+            </div>
+            <div className="stat-item expense-stat">
+              <div className="stat-label">Total Expenses</div>
+              <div className="stat-value negative">{formatAmount(summary.expenses)}</div>
+            </div>
+            <div className="stat-item balance-stat">
+              <div className="stat-label">Current Balance</div>
+              <div className={`stat-value ${summary.balance >= 0 ? 'positive' : 'negative'}`} style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                {formatAmountWithSign(summary.balance, true)}
               </div>
-              <div className="stat-item expense-stat">
-                <div className="stat-label">Total Expenses</div>
-                <div className="stat-value negative">€{summary.expenses.toFixed(2)}</div>
-              </div>
-              <div className="stat-item balance-stat">
-                <div className="stat-label">Current Balance</div>
-                <div className={`stat-value ${summary.balance >= 0 ? 'positive' : 'negative'}`} style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                  {summary.balance >= 0 ? '+' : ''}€{summary.balance.toFixed(2)}
-                </div>
-              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -329,7 +331,7 @@ const BudgetCalculator = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="period" />
               <YAxis />
-              <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+              <Tooltip formatter={(value) => formatAmount(value)} />
               <Legend />
               <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={3} name="Income" />
               <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={3} name="Expenses" />
@@ -358,7 +360,7 @@ const BudgetCalculator = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+              <Tooltip formatter={(value) => formatAmount(value)} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -384,7 +386,7 @@ const BudgetCalculator = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+              <Tooltip formatter={(value) => formatAmount(value)} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -399,7 +401,7 @@ const BudgetCalculator = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+              <Tooltip formatter={(value) => formatAmount(value)} />
               <Bar dataKey="value" fill="#667eea" />
             </BarChart>
           </ResponsiveContainer>
@@ -460,7 +462,7 @@ const BudgetCalculator = () => {
               </button>
             );
           }},
-          { key: 'amount', header: 'Amount (€)', render: (val, row) => `${row.type === 'income' ? '+' : '-'}€${Math.abs(val).toFixed(2)}` },
+          { key: 'amount', header: 'Amount', render: (val, row) => formatAmountWithSign(val * (row.type === 'income' ? 1 : -1), true) },
           { key: 'date', header: 'Date', render: (val) => new Date(val).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
           {
             key: 'id',
