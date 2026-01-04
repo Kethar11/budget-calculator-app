@@ -58,10 +58,11 @@ When you shut down your laptop and restart, **all your records will still be the
 - Volumes persist data
 - IndexedDB persists in browser
 
-### ⚠️ Clear Browser Data
-**Result**: Frontend data is lost!
+### ✅ Clear Browser Data
+**Result**: Data is automatically restored!
 - IndexedDB will be cleared
-- Backend Excel files remain (if using)
+- **BUT**: On next app startup, data is automatically restored from backend Excel files
+- Your data is safe! 🎉
 
 ### ⚠️ Delete Project Folder
 **Result**: All data is lost!
@@ -105,9 +106,15 @@ To verify data persistence:
 - ✅ Docker restarts
 - ✅ Application restarts
 - ✅ Browser restarts
+- ✅ **Browser data clearing** (automatically restored from backend!)
+
+**How it works**:
+1. All data is automatically synced to backend Excel files
+2. If browser data is cleared, data is restored on next startup
+3. Data is stored in both IndexedDB (fast) and Excel files (persistent)
 
 **Just remember**:
-- Don't clear browser data
 - Don't delete the project folder
 - Export regularly for extra safety
+- **You can safely clear browser data - it will be restored!** 🎉
 

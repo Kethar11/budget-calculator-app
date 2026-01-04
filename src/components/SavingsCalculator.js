@@ -8,6 +8,8 @@ import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import { useCurrency } from '../contexts/CurrencyContext';
+import { autoSync } from '../utils/backendSync';
+import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
 import * as XLSX from 'xlsx';
 import './SavingsCalculator.css';
 
@@ -73,7 +75,7 @@ const SavingsCalculator = () => {
     }
 
     try {
-      await db.savings.add({
+      const savingId = await db.savings.add({
         ...formData,
         amount: parseFloat(formData.amount),
         interestRate: parseFloat(formData.interestRate) || 0,
@@ -91,6 +93,15 @@ const SavingsCalculator = () => {
         description: ''
       });
       await loadSavings();
+      // Auto-sync to backend
+      const savedSaving = await db.savings.get(savingId);
+      if (savedSaving) {
+        autoSync(db, 'saving', savedSaving);
+      }
+      // Auto-sync to Electron storage
+      if (isElectron()) {
+        syncToElectronStorage(db);
+      }
     } catch (error) {
       console.error('Error adding savings:', error);
       alert('Error adding savings');
@@ -158,6 +169,11 @@ const SavingsCalculator = () => {
         description: ''
       });
       await loadSavings();
+      // Auto-sync to backend
+      const updatedSaving = await db.savings.get(editingId);
+      if (updatedSaving) {
+        autoSync(db, 'saving', updatedSaving);
+      }
     } catch (error) {
       console.error('Error updating savings:', error);
       alert('Error updating savings');

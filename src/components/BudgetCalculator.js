@@ -8,6 +8,8 @@ import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import BudgetPlanner from './BudgetPlanner';
+import { autoSync } from '../utils/backendSync';
+import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
 import ExcelExport from './ExcelExport';
 import DateRangePicker from './DateRangePicker';
 import { useCurrency } from '../contexts/CurrencyContext';
@@ -71,6 +73,15 @@ const BudgetCalculator = () => {
         files: []
       });
       await loadTransactions();
+      // Auto-sync to backend
+      const savedTransaction = await db.transactions.get(transactionId);
+      if (savedTransaction) {
+        autoSync(db, 'transaction', savedTransaction);
+      }
+      // Auto-sync to Electron storage
+      if (isElectron()) {
+        syncToElectronStorage(db);
+      }
       return transactionId;
     } catch (error) {
       console.error('Error adding transaction:', error);
@@ -106,6 +117,11 @@ const BudgetCalculator = () => {
       });
       setEditingId(null);
       await loadTransactions();
+      // Auto-sync to backend
+      const updatedTransaction = await db.transactions.get(editingId);
+      if (updatedTransaction) {
+        autoSync(db, 'transaction', updatedTransaction);
+      }
     } catch (error) {
       console.error('Error updating transaction:', error);
       throw error;

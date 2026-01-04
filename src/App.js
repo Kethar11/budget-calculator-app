@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './utils/database';
+import { restoreFromBackend } from './utils/backendSync';
+import { initElectronStorage, restoreFromElectronStorage, syncToElectronStorage } from './utils/electronStorage';
 import './App.css';
 import BudgetCalculator from './components/BudgetCalculator';
 import SavingsCalculator from './components/SavingsCalculator';
@@ -25,6 +27,45 @@ function AppContent() {
   });
 
   useEffect(() => {
+    let syncInterval = null;
+    let cleanupFn = null;
+    
+    // Initialize Electron storage and restore data
+    const initStorage = async () => {
+      const isElectron = await initElectronStorage();
+      if (isElectron) {
+        // In Electron: restore from local files first, then sync
+        await restoreFromElectronStorage(db);
+        // Auto-sync IndexedDB changes to files (reduced frequency for performance)
+        // Only sync when app is active, every 60 seconds instead of 5
+        const handleVisibilityChange = () => {
+          if (document.hidden) {
+            if (syncInterval) {
+              clearInterval(syncInterval);
+              syncInterval = null;
+            }
+          } else {
+            if (!syncInterval) {
+              syncInterval = setInterval(() => syncToElectronStorage(db), 60000); // Sync every 60 seconds
+            }
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        syncInterval = setInterval(() => syncToElectronStorage(db), 60000);
+        
+        cleanupFn = () => {
+          if (syncInterval) {
+            clearInterval(syncInterval);
+          }
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+      } else {
+        // In browser: restore from backend
+        restoreFromBackend(db);
+      }
+    };
+    initStorage();
+    
     const loadRealTimeStats = async () => {
       try {
         // Load transactions (all-time)
@@ -61,10 +102,17 @@ function AppContent() {
 
     loadRealTimeStats();
     
-    // Update stats every 5 seconds
-    const interval = setInterval(loadRealTimeStats, 5000);
+    // Update stats only when tab becomes visible (reduced CPU usage)
+    // Remove frequent polling - stats update only on data changes or tab focus
+    const handleFocus = () => {
+      loadRealTimeStats();
+    };
+    window.addEventListener('focus', handleFocus);
     
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      if (cleanupFn) cleanupFn();
+    };
   }, []);
 
   return (
@@ -85,7 +133,7 @@ function AppContent() {
         <div className="header-stats">
           <div className="stat-card">
             <div className="stat-icon">
-              <TrendingUp size={32} color="white" />
+              <TrendingUp size={32} color="#6366f1" />
             </div>
             <div className="stat-info">
               <div className="stat-label">Total Earnings</div>
@@ -94,7 +142,7 @@ function AppContent() {
           </div>
           <div className="stat-card">
             <div className="stat-icon">
-              <TrendingDown size={32} color="white" />
+              <TrendingDown size={32} color="#6366f1" />
             </div>
             <div className="stat-info">
               <div className="stat-label">Total Expense</div>
@@ -103,7 +151,7 @@ function AppContent() {
           </div>
           <div className="stat-card">
             <div className="stat-icon">
-              <PiggyBank size={32} color="white" />
+              <PiggyBank size={32} color="#6366f1" />
             </div>
             <div className="stat-info">
               <div className="stat-label">Total Savings</div>
@@ -112,7 +160,7 @@ function AppContent() {
           </div>
           <div className="stat-card">
             <div className="stat-icon">
-              <Wallet size={32} color="white" />
+              <Wallet size={32} color="#6366f1" />
             </div>
             <div className="stat-info">
               <div className="stat-label">Net Balance</div>

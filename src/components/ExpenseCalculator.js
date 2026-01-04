@@ -6,6 +6,8 @@ import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import { useCurrency } from '../contexts/CurrencyContext';
+import { autoSync } from '../utils/backendSync';
+import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
 import {
   PieChart,
   Pie,
@@ -218,6 +220,11 @@ const ExpenseCalculator = () => {
         description: ''
       });
       await loadExpenses();
+      // Auto-sync to backend
+      const updatedExpense = await db.expenses.get(editingId);
+      if (updatedExpense) {
+        autoSync(db, 'expense', updatedExpense);
+      }
     } catch (error) {
       console.error('Error updating expense:', error);
       alert('Error updating expense');
