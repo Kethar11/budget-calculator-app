@@ -13,6 +13,8 @@ import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
 import ExcelExport from './ExcelExport';
 import DateRangePicker from './DateRangePicker';
 import { useCurrency } from '../contexts/CurrencyContext';
+import RecordModal from './RecordModal';
+import TransactionModalForm from './TransactionModalForm';
 import './BudgetCalculator.css';
 
 const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b', '#fa709a', '#fee140', '#30cfd0', '#330867'];
@@ -29,6 +31,7 @@ const BudgetCalculator = () => {
   const [transactionFiles, setTransactionFiles] = useState({});
   const [selectedFileModal, setSelectedFileModal] = useState(null); // { transactionId, files }
   const [editingId, setEditingId] = useState(null); // ID of transaction being edited
+  const [selectedRecordModal, setSelectedRecordModal] = useState(null);
 
   useEffect(() => {
     loadTransactions();
@@ -70,7 +73,8 @@ const BudgetCalculator = () => {
         ...transaction,
         date: transaction.date || new Date().toISOString(),
         createdAt: new Date().toISOString(),
-        files: []
+        files: [],
+        entryCurrency: transaction.entryCurrency || 'EUR'
       });
       await loadTransactions();
       // Auto-sync to backend
@@ -113,7 +117,8 @@ const BudgetCalculator = () => {
     try {
       await db.transactions.update(editingId, {
         ...transaction,
-        date: transaction.date || new Date().toISOString()
+        date: transaction.date || new Date().toISOString(),
+        entryCurrency: transaction.entryCurrency || 'EUR'
       });
       setEditingId(null);
       await loadTransactions();
@@ -459,6 +464,7 @@ const BudgetCalculator = () => {
 
       <TableView
         title={`All Transactions${(startDate || endDate || searchQuery || transactionTypeFilter !== 'all') ? ' (Filtered)' : ''}`}
+        onRowDoubleClick={(row) => setSelectedRecordModal(row)}
         data={filteredTransactions.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))}
         columns={[
           { key: 'type', header: 'Type', render: (val) => <span className={`transaction-type ${val}`}>{val.charAt(0).toUpperCase() + val.slice(1)}</span> },
@@ -567,6 +573,42 @@ const BudgetCalculator = () => {
           transactionCategory={selectedFileModal.category}
           transactionDescription={selectedFileModal.description}
           onClose={() => setSelectedFileModal(null)}
+        />
+      )}
+
+      {selectedRecordModal && (
+        <RecordModal
+          record={selectedRecordModal}
+          recordType="Transaction"
+          onClose={() => setSelectedRecordModal(null)}
+          onUpdate={async (updatedData) => {
+            try {
+              await db.transactions.update(selectedRecordModal.id, updatedData);
+              await loadTransactions();
+              const updatedTransaction = await db.transactions.get(selectedRecordModal.id);
+              if (updatedTransaction) {
+                autoSync(db, 'transaction', updatedTransaction);
+              }
+              if (isElectron()) {
+                syncToElectronStorage(db);
+              }
+              setSelectedRecordModal(null);
+            } catch (error) {
+              console.error('Error updating transaction:', error);
+              alert('Error updating transaction');
+            }
+          }}
+          onDelete={async (id) => {
+            try {
+              await deleteFilesForTransaction(id, 'transaction');
+              await db.transactions.delete(id);
+              await loadTransactions();
+            } catch (error) {
+              console.error('Error deleting transaction:', error);
+            }
+          }}
+          formComponent={TransactionModalForm}
+          formatAmount={formatAmount}
         />
       )}
     </div>

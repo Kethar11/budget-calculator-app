@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Target, Plus, Trash2, Wallet, CheckCircle, ExternalLink, Link as LinkIcon, Edit2, X } from 'lucide-react';
 import { db } from '../utils/database';
 import { useCurrency } from '../contexts/CurrencyContext';
+import AmountInput from './AmountInput';
 import './BuyingGoals.css';
 
 const BuyingGoals = () => {
@@ -16,7 +17,8 @@ const BuyingGoals = () => {
     category: '',
     account: '',
     description: '',
-    link: ''
+    link: '',
+    entryCurrency: 'EUR'
   });
   const [contributionForm, setContributionForm] = useState({
     goalId: null,
@@ -66,7 +68,8 @@ const BuyingGoals = () => {
         description: formData.description || '',
         link: formData.link || '',
         createdAt: new Date().toISOString(),
-        contributions: []
+        contributions: [],
+        entryCurrency: formData.entryCurrency || 'EUR'
       });
       setFormData({
         name: '',
@@ -75,7 +78,8 @@ const BuyingGoals = () => {
         category: '',
         account: '',
         description: '',
-        link: ''
+        link: '',
+        entryCurrency: 'EUR'
       });
       setShowForm(false);
       await loadGoals();
@@ -139,7 +143,8 @@ const BuyingGoals = () => {
       category: goal.category || '',
       account: goal.account || '',
       description: goal.description || '',
-      link: goal.link || ''
+      link: goal.link || '',
+      entryCurrency: goal.entryCurrency || 'EUR'
     });
   };
 
@@ -153,7 +158,8 @@ const BuyingGoals = () => {
       category: '',
       account: '',
       description: '',
-      link: ''
+      link: '',
+      entryCurrency: 'EUR'
     });
   };
 
@@ -173,7 +179,8 @@ const BuyingGoals = () => {
         category: formData.category || '',
         account: formData.account || '',
         description: formData.description || '',
-        link: formData.link || ''
+        link: formData.link || '',
+        entryCurrency: formData.entryCurrency || 'EUR'
       });
       cancelEdit();
       await loadGoals();
@@ -283,21 +290,19 @@ const BuyingGoals = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Target Amount *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <AmountInput
                   value={formData.targetAmount}
-                  onChange={(e) => {
-                    const amount = e.target.value;
-                    setFormData({ 
-                      ...formData, 
-                      targetAmount: amount,
-                      goalType: getGoalTypeInfo(amount).type
+                  entryCurrency={formData.entryCurrency}
+                  onChange={(data) => {
+                    setFormData({
+                      ...formData,
+                      targetAmount: data.amount,
+                      entryCurrency: data.entryCurrency,
+                      goalType: getGoalTypeInfo(data.amount).type
                     });
                   }}
-                  required
+                  label="Target Amount"
+                  required={true}
                 />
                 <div className="goal-type-indicator">
                   Type: <span style={{ color: getGoalTypeInfo(formData.targetAmount).color, fontWeight: 'bold' }}>

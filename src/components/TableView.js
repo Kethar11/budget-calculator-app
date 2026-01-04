@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { List, BarChart3 } from 'lucide-react';
 import './TableView.css';
 
-const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage, chartContent, onRowClick }) => {
+const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage, chartContent, onRowClick, onRowDoubleClick }) => {
   const [selectedRowId, setSelectedRowId] = useState(null);
   if (data.length === 0) {
     return (
@@ -78,7 +78,13 @@ const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage,
                           onRowClick(row);
                         }
                       }}
+                      onDoubleClick={() => {
+                        if (onRowDoubleClick) {
+                          onRowDoubleClick(row);
+                        }
+                      }}
                       style={{ cursor: 'pointer' }}
+                      title="Double-click to view/edit"
                     >
                       {columns.map((col, colIndex) => (
                         <td key={colIndex}>

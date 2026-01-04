@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, X } from 'lucide-react';
+import AmountInput from './AmountInput';
 import './BudgetForm.css';
 
 const BudgetForm = ({ onAdd, editingTransaction, onCancel }) => {
@@ -10,7 +11,8 @@ const BudgetForm = ({ onAdd, editingTransaction, onCancel }) => {
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().slice(0, 5)
+    time: new Date().toTimeString().slice(0, 5),
+    entryCurrency: 'EUR'
   });
 
   useEffect(() => {
@@ -23,7 +25,8 @@ const BudgetForm = ({ onAdd, editingTransaction, onCancel }) => {
         amount: editingTransaction.amount || '',
         description: editingTransaction.description || '',
         date: date.toISOString().split('T')[0],
-        time: date.toTimeString().slice(0, 5)
+        time: date.toTimeString().slice(0, 5),
+        entryCurrency: editingTransaction.entryCurrency || 'EUR'
       });
     } else {
       setFormData({
@@ -137,7 +140,8 @@ const BudgetForm = ({ onAdd, editingTransaction, onCancel }) => {
       await onAdd({
         ...formData,
         amount: parseFloat(formData.amount),
-        date: dateTime.toISOString()
+        date: dateTime.toISOString(),
+        entryCurrency: formData.entryCurrency || 'EUR'
       });
       if (!editingTransaction) {
         setFormData({
@@ -147,7 +151,8 @@ const BudgetForm = ({ onAdd, editingTransaction, onCancel }) => {
           amount: '',
           description: '',
           date: new Date().toISOString().split('T')[0],
-          time: new Date().toTimeString().slice(0, 5)
+          time: new Date().toTimeString().slice(0, 5),
+          entryCurrency: 'EUR'
         });
       }
     } catch (error) {
@@ -252,18 +257,19 @@ const BudgetForm = ({ onAdd, editingTransaction, onCancel }) => {
         )}
 
 
-        <div className="form-group">
-          <label>Amount</label>
-          <input
-            type="number"
-            name="amount"
-            value={formData.amount}
-            onChange={handleChange}
-            step="0.01"
-            min="0"
-            required
-          />
-        </div>
+        <AmountInput
+          value={formData.amount}
+          entryCurrency={formData.entryCurrency}
+          onChange={(data) => {
+            setFormData({
+              ...formData,
+              amount: data.amount,
+              entryCurrency: data.entryCurrency
+            });
+          }}
+          label="Amount"
+          required={true}
+        />
 
         <div className="form-group">
           <label>

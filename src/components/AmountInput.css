@@ -1,0 +1,104 @@
+.amount-input-group {
+  margin-bottom: 20px;
+}
+
+.amount-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 500;
+}
+
+.amount-input-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.currency-selector-wrapper {
+  flex-shrink: 0;
+}
+
+.currency-selector {
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-right: none;
+  min-width: 100px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 35px;
+}
+
+.currency-selector:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  border-color: #667eea;
+  transform: scale(1.02);
+}
+
+.currency-selector:focus {
+  outline: none;
+  border-color: #667eea;
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.amount-input {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 0 8px 8px 0;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+  border-left: 1px solid #e0e0e0;
+}
+
+.amount-input:focus {
+  outline: none;
+  border-color: #667eea;
+  border-left-color: #667eea;
+}
+
+.amount-preview {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preview-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.preview-amount {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.preview-amount.saved {
+  color: #059669;
+}
+
+.preview-amount.display {
+  color: #6366f1;
+}
+
+.preview-separator {
+  color: #94a3b8;
+  margin: 0 2px;
+}
+

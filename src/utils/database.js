@@ -152,5 +152,40 @@ db.version(9).stores({
   });
 });
 
+// Version 10 - Add entry currency field
+db.version(10).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt, files, entryCurrency',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt, files, entryCurrency',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt, files, entryCurrency',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt',
+  files: '++id, transactionId, transactionType, fileName, fileType, fileSize, fileData, uploadedAt',
+  goals: '++id, name, targetAmount, currentAmount, goalType, category, account, description, link, createdAt, contributions, entryCurrency',
+  settings: '++id, key, value, updatedAt',
+  reminders: '++id, title, description, reminderDate, reminderTime, priority, isCompleted, createdAt, updatedAt'
+}).upgrade(async tx => {
+  // Add entryCurrency field to existing records (default to EUR)
+  await tx.table('transactions').toCollection().modify(transaction => {
+    if (!transaction.entryCurrency) {
+      transaction.entryCurrency = 'EUR';
+    }
+  });
+  await tx.table('expenses').toCollection().modify(expense => {
+    if (!expense.entryCurrency) {
+      expense.entryCurrency = 'EUR';
+    }
+  });
+  await tx.table('savings').toCollection().modify(saving => {
+    if (!saving.entryCurrency) {
+      saving.entryCurrency = 'EUR';
+    }
+  });
+  await tx.table('goals').toCollection().modify(goal => {
+    if (!goal.entryCurrency) {
+      goal.entryCurrency = 'EUR';
+    }
+  });
+});
+
 export { db };
 

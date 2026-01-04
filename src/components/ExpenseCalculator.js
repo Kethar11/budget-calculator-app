@@ -8,6 +8,9 @@ import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/file
 import { useCurrency } from '../contexts/CurrencyContext';
 import { autoSync } from '../utils/backendSync';
 import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
+import AmountInput from './AmountInput';
+import RecordModal from './RecordModal';
+import ExpenseModalForm from './ExpenseModalForm';
 import {
   PieChart,
   Pie,
@@ -37,7 +40,8 @@ const ExpenseCalculator = () => {
     category: '',
     subcategory: '',
     amount: '',
-    description: ''
+    description: '',
+    entryCurrency: 'EUR'
   });
   const [loading, setLoading] = useState(true);
   const [expenseView, setExpenseView] = useState('list');
@@ -98,7 +102,8 @@ const ExpenseCalculator = () => {
         description: formData.description || '',
         date: new Date().toISOString(),
         createdAt: new Date().toISOString(),
-        files: []
+        files: [],
+        entryCurrency: formData.entryCurrency || 'EUR'
       });
 
       // Save pending files if any
@@ -118,9 +123,12 @@ const ExpenseCalculator = () => {
         category: '',
         subcategory: '',
         amount: '',
-        description: ''
+        description: '',
+        entryCurrency: 'EUR'
       });
       await loadExpenses();
+      // Trigger header stats update
+      window.dispatchEvent(new Event('dataChanged'));
     } catch (error) {
       console.error('Error adding expense:', error);
       alert('Error adding expense');
@@ -173,6 +181,8 @@ const ExpenseCalculator = () => {
       // Then delete the expense
       await db.expenses.delete(id);
       await loadExpenses();
+      // Trigger header stats update
+      window.dispatchEvent(new Event('dataChanged'));
     } catch (error) {
       console.error('Error deleting expense:', error);
     }
@@ -184,7 +194,8 @@ const ExpenseCalculator = () => {
       category: expense.category || '',
       subcategory: expense.subcategory || '',
       amount: expense.amount || '',
-      description: expense.description || ''
+      description: expense.description || '',
+      entryCurrency: expense.entryCurrency || 'EUR'
     });
   };
 
@@ -194,7 +205,8 @@ const ExpenseCalculator = () => {
       category: '',
       subcategory: '',
       amount: '',
-      description: ''
+      description: '',
+      entryCurrency: 'EUR'
     });
   };
 
@@ -210,16 +222,20 @@ const ExpenseCalculator = () => {
         category: formData.category,
         subcategory: formData.subcategory || '',
         amount: parseFloat(formData.amount),
-        description: formData.description || ''
+        description: formData.description || '',
+        entryCurrency: formData.entryCurrency || 'EUR'
       });
       setEditingId(null);
       setFormData({
         category: '',
         subcategory: '',
         amount: '',
-        description: ''
+        description: '',
+        entryCurrency: 'EUR'
       });
       await loadExpenses();
+      // Trigger header stats update
+      window.dispatchEvent(new Event('dataChanged'));
       // Auto-sync to backend
       const updatedExpense = await db.expenses.get(editingId);
       if (updatedExpense) {
@@ -428,17 +444,19 @@ const ExpenseCalculator = () => {
                   </select>
                 </div>
               )}
-              <div className="form-group">
-                <label>Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  required
-                />
-              </div>
+              <AmountInput
+                value={formData.amount}
+                entryCurrency={formData.entryCurrency}
+                onChange={(data) => {
+                  setFormData({
+                    ...formData,
+                    amount: data.amount,
+                    entryCurrency: data.entryCurrency
+                  });
+                }}
+                label="Amount"
+                required={true}
+              />
               <div className="form-group">
                 <label>Description</label>
                 <input
@@ -620,6 +638,7 @@ const ExpenseCalculator = () => {
         
         <TableView
           title={`All Expenses${(startDate || endDate || categoryFilter !== 'all' || searchQuery) ? ' (Filtered)' : ''}`}
+          onRowDoubleClick={(row) => setSelectedRecordModal(row)}
           data={filteredExpenses
             .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
             .map(expense => ({
@@ -812,6 +831,46 @@ const ExpenseCalculator = () => {
           transactionId={selectedFileModal.transactionId}
           transactionType={selectedFileModal.transactionType}
           onClose={() => setSelectedFileModal(null)}
+        />
+      )}
+
+      {selectedRecordModal && (
+        <RecordModal
+          record={selectedRecordModal}
+          recordType="Expense"
+          onClose={() => setSelectedRecordModal(null)}
+          onUpdate={async (updatedData) => {
+            try {
+              await db.expenses.update(selectedRecordModal.id, updatedData);
+              await loadExpenses();
+              const updatedExpense = await db.expenses.get(selectedRecordModal.id);
+              if (updatedExpense) {
+                autoSync(db, 'expense', updatedExpense);
+              }
+              if (isElectron()) {
+                syncToElectronStorage(db);
+              }
+              setSelectedRecordModal(null);
+              // Trigger header stats update
+              window.dispatchEvent(new Event('dataChanged'));
+            } catch (error) {
+              console.error('Error updating expense:', error);
+              alert('Error updating expense');
+            }
+          }}
+          onDelete={async (id) => {
+            try {
+              await deleteFilesForTransaction(id, 'expense');
+              await db.expenses.delete(id);
+              await loadExpenses();
+              // Trigger header stats update
+              window.dispatchEvent(new Event('dataChanged'));
+            } catch (error) {
+              console.error('Error deleting expense:', error);
+            }
+          }}
+          formComponent={ExpenseModalForm}
+          formatAmount={formatAmount}
         />
       )}
     </div>

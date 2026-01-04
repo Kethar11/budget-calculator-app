@@ -10,6 +10,9 @@ import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/file
 import { useCurrency } from '../contexts/CurrencyContext';
 import { autoSync } from '../utils/backendSync';
 import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
+import AmountInput from './AmountInput';
+import RecordModal from './RecordModal';
+import SavingsModalForm from './SavingsModalForm';
 import * as XLSX from 'xlsx';
 import './SavingsCalculator.css';
 
@@ -22,7 +25,8 @@ const SavingsCalculator = () => {
     date: new Date().toISOString().split('T')[0],
     maturityDate: '',
     interestRate: '',
-    description: ''
+    description: '',
+    entryCurrency: 'EUR'
   });
   const [loading, setLoading] = useState(true);
   const [savingsView, setSavingsView] = useState('list');
@@ -33,6 +37,7 @@ const SavingsCalculator = () => {
   const [savingsFiles, setSavingsFiles] = useState({});
   const [selectedFileModal, setSelectedFileModal] = useState(null); // { transactionId, files }
   const [editingId, setEditingId] = useState(null); // ID of savings being edited
+  const [selectedRecordModal, setSelectedRecordModal] = useState(null);
 
   useEffect(() => {
     loadSavings();
@@ -82,7 +87,8 @@ const SavingsCalculator = () => {
         date: formData.date,
         maturityDate: formData.maturityDate || '',
         createdAt: new Date().toISOString(),
-        files: []
+        files: [],
+        entryCurrency: formData.entryCurrency || 'EUR'
       });
       setFormData({
         accountType: '',
@@ -128,7 +134,8 @@ const SavingsCalculator = () => {
       date: saving.date ? new Date(saving.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       maturityDate: saving.maturityDate ? new Date(saving.maturityDate).toISOString().split('T')[0] : '',
       interestRate: saving.interestRate || '',
-      description: saving.description || ''
+      description: saving.description || '',
+      entryCurrency: saving.entryCurrency || 'EUR'
     });
   };
 
@@ -140,7 +147,8 @@ const SavingsCalculator = () => {
       date: new Date().toISOString().split('T')[0],
       maturityDate: '',
       interestRate: '',
-      description: ''
+      description: '',
+      entryCurrency: 'EUR'
     });
   };
 
@@ -157,7 +165,8 @@ const SavingsCalculator = () => {
         amount: parseFloat(formData.amount),
         interestRate: parseFloat(formData.interestRate) || 0,
         date: formData.date,
-        maturityDate: formData.maturityDate || ''
+        maturityDate: formData.maturityDate || '',
+        entryCurrency: formData.entryCurrency || 'EUR'
       });
       setEditingId(null);
       setFormData({
@@ -303,17 +312,19 @@ const SavingsCalculator = () => {
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label>Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  required
-                />
-              </div>
+              <AmountInput
+                value={formData.amount}
+                entryCurrency={formData.entryCurrency}
+                onChange={(data) => {
+                  setFormData({
+                    ...formData,
+                    amount: data.amount,
+                    entryCurrency: data.entryCurrency
+                  });
+                }}
+                label="Amount"
+                required={true}
+              />
               <div className="form-group">
                 <label>Date of Deposit</label>
                 <input
@@ -478,6 +489,7 @@ const SavingsCalculator = () => {
         
         <TableView
           title={`Your Savings${(startDate || endDate || accountTypeFilter !== 'all' || searchQuery) ? ' (Filtered)' : ''}`}
+          onRowDoubleClick={(row) => setSelectedRecordModal(row)}
           data={filteredSavings
             .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
             .map(saving => ({
@@ -627,6 +639,42 @@ const SavingsCalculator = () => {
           transactionCategory={selectedFileModal.accountType}
           transactionDescription={selectedFileModal.description}
           onClose={() => setSelectedFileModal(null)}
+        />
+      )}
+
+      {selectedRecordModal && (
+        <RecordModal
+          record={selectedRecordModal}
+          recordType="Savings"
+          onClose={() => setSelectedRecordModal(null)}
+          onUpdate={async (updatedData) => {
+            try {
+              await db.savings.update(selectedRecordModal.id, updatedData);
+              await loadSavings();
+              const updatedSaving = await db.savings.get(selectedRecordModal.id);
+              if (updatedSaving) {
+                autoSync(db, 'saving', updatedSaving);
+              }
+              if (isElectron()) {
+                syncToElectronStorage(db);
+              }
+              setSelectedRecordModal(null);
+            } catch (error) {
+              console.error('Error updating savings:', error);
+              alert('Error updating savings');
+            }
+          }}
+          onDelete={async (id) => {
+            try {
+              await deleteFilesForTransaction(id, 'savings');
+              await db.savings.delete(id);
+              await loadSavings();
+            } catch (error) {
+              console.error('Error deleting savings:', error);
+            }
+          }}
+          formComponent={SavingsModalForm}
+          formatAmount={formatAmount}
         />
       )}
     </div>

@@ -84,14 +84,17 @@ function AppContent() {
         const savings = await db.savings.toArray();
         const totalSavings = savings.reduce((sum, s) => sum + (s.amount || 0), 0);
 
-        // Load expenses (all-time)
+        // Load expenses (all-time) from expenses table
         const expenseRecords = await db.expenses.toArray();
         const totalExpenseAmount = expenseRecords.reduce((sum, e) => sum + (e.amount || 0), 0);
 
+        // Combine expenses from both transactions and expenses table
+        const combinedTotalExpenses = totalExpenses + totalExpenseAmount;
+
         setRealTimeStats({
-          totalBalance: totalIncome - totalExpenses,
+          totalBalance: totalIncome - combinedTotalExpenses,
           totalIncome: totalIncome,
-          totalExpenses: totalExpenses,
+          totalExpenses: combinedTotalExpenses, // Combined: transactions + expenses table
           totalSavings: totalSavings,
           totalExpenseAmount: totalExpenseAmount
         });
@@ -109,8 +112,15 @@ function AppContent() {
     };
     window.addEventListener('focus', handleFocus);
     
+    // Listen for data changes to refresh stats
+    const handleDataChange = () => {
+      loadRealTimeStats();
+    };
+    window.addEventListener('dataChanged', handleDataChange);
+    
     return () => {
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('dataChanged', handleDataChange);
       if (cleanupFn) cleanupFn();
     };
   }, []);
