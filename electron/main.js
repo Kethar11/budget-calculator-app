@@ -16,11 +16,15 @@ function createWindow() {
   });
 
   if (isDev) {
+    // Try Docker first, then fallback to npm start
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../build/index.html'));
   }
+  
+  // Set window title
+  mainWindow.setTitle('Budget Calculator');
 
   mainWindow.on('closed', () => {
     mainWindow = null;
