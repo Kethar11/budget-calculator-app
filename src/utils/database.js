@@ -169,20 +169,67 @@ db.version(10).stores({
     if (!transaction.entryCurrency) {
       transaction.entryCurrency = 'EUR';
     }
+    if (!transaction.originalAmount) {
+      transaction.originalAmount = transaction.amount;
+    }
   });
   await tx.table('expenses').toCollection().modify(expense => {
     if (!expense.entryCurrency) {
       expense.entryCurrency = 'EUR';
+    }
+    if (!expense.originalAmount) {
+      expense.originalAmount = expense.amount;
     }
   });
   await tx.table('savings').toCollection().modify(saving => {
     if (!saving.entryCurrency) {
       saving.entryCurrency = 'EUR';
     }
+    if (!saving.originalAmount) {
+      saving.originalAmount = saving.amount;
+    }
   });
   await tx.table('goals').toCollection().modify(goal => {
     if (!goal.entryCurrency) {
       goal.entryCurrency = 'EUR';
+    }
+    if (!goal.originalTargetAmount) {
+      goal.originalTargetAmount = goal.targetAmount;
+    }
+  });
+});
+
+// Version 11 - Add originalAmount field to store original entered amount
+db.version(11).stores({
+  transactions: '++id, type, category, amount, date, description, createdAt, files, entryCurrency, originalAmount',
+  savings: '++id, accountType, amount, date, maturityDate, interestRate, description, createdAt, files, entryCurrency, originalAmount',
+  expenses: '++id, category, subcategory, amount, date, description, createdAt, files, entryCurrency, originalAmount',
+  budgets: '++id, category, monthlyLimit, description, createdAt',
+  recurring: '++id, type, category, amount, description, frequency, startDate, createdAt',
+  files: '++id, transactionId, transactionType, fileName, fileType, fileSize, fileData, uploadedAt',
+  goals: '++id, name, targetAmount, currentAmount, goalType, category, account, description, link, createdAt, contributions, entryCurrency, originalTargetAmount',
+  settings: '++id, key, value, updatedAt',
+  reminders: '++id, title, description, reminderDate, reminderTime, priority, isCompleted, createdAt, updatedAt'
+}).upgrade(async tx => {
+  // Add originalAmount field to existing records
+  await tx.table('transactions').toCollection().modify(transaction => {
+    if (!transaction.originalAmount) {
+      transaction.originalAmount = transaction.amount;
+    }
+  });
+  await tx.table('expenses').toCollection().modify(expense => {
+    if (!expense.originalAmount) {
+      expense.originalAmount = expense.amount;
+    }
+  });
+  await tx.table('savings').toCollection().modify(saving => {
+    if (!saving.originalAmount) {
+      saving.originalAmount = saving.amount;
+    }
+  });
+  await tx.table('goals').toCollection().modify(goal => {
+    if (!goal.originalTargetAmount) {
+      goal.originalTargetAmount = goal.targetAmount;
     }
   });
 });

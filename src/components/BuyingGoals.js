@@ -394,6 +394,15 @@ const BuyingGoals = () => {
                         <div>
                           <h4>{goal.name}</h4>
                           {goal.category && <span className="goal-category">{goal.category}</span>}
+                          {goal.createdAt && (
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                              Created: {new Date(goal.createdAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <button

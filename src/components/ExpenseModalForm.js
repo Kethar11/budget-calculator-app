@@ -12,17 +12,22 @@ const ExpenseModalForm = ({ record, onSave, onCancel, readOnly = false, formatAm
     subcategory: '',
     amount: '',
     description: '',
-    entryCurrency: 'EUR'
+    entryCurrency: 'EUR',
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().slice(0, 5)
   });
 
   useEffect(() => {
     if (record) {
+      const recordDate = record.date ? new Date(record.date) : new Date(record.createdAt);
       setFormData({
         category: record.category || '',
         subcategory: record.subcategory || '',
         amount: record.amount || '',
         description: record.description || '',
-        entryCurrency: record.entryCurrency || 'EUR'
+        entryCurrency: record.entryCurrency || 'EUR',
+        date: recordDate.toISOString().split('T')[0],
+        time: recordDate.toTimeString().slice(0, 5)
       });
     }
   }, [record]);
@@ -56,9 +61,15 @@ const ExpenseModalForm = ({ record, onSave, onCancel, readOnly = false, formatAm
   const handleSubmit = (e) => {
     e.preventDefault();
     if (onSave) {
+      // Combine date and time into ISO string
+      const dateTime = formData.date && formData.time 
+        ? new Date(`${formData.date}T${formData.time}`).toISOString()
+        : new Date().toISOString();
+      
       onSave({
         ...formData,
-        amount: parseFloat(formData.amount)
+        amount: parseFloat(formData.amount),
+        date: dateTime
       });
     }
   };
@@ -166,6 +177,29 @@ const ExpenseModalForm = ({ record, onSave, onCancel, readOnly = false, formatAm
           required
           disabled={readOnly}
         />
+      </div>
+
+      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+        <div className="form-group">
+          <label>Date *</label>
+          <input
+            type="date"
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            required
+            disabled={readOnly}
+          />
+        </div>
+        <div className="form-group">
+          <label>Time *</label>
+          <input
+            type="time"
+            value={formData.time}
+            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+            required
+            disabled={readOnly}
+          />
+        </div>
       </div>
 
       <div className="modal-form-actions">

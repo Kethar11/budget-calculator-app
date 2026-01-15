@@ -173,3 +173,5 @@ The system automatically creates timestamped backups in the `backend/backups/` d
 - The service account key provides access to Google Sheets - protect it
 - Excel files contain sensitive financial data - store securely
 
+
+

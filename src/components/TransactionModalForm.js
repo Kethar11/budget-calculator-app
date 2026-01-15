@@ -235,3 +235,5 @@ const TransactionModalForm = ({ record, onSave, onCancel, readOnly = false, form
 
 export default TransactionModalForm;
 
+
+

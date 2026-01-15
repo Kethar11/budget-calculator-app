@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Mail, Trash2, File, Search, Edit2, X } from 'lucide-react';
 import TableView from './TableView';
-import DateRangePicker from './DateRangePicker';
+import CompactControls from './CompactControls';
 import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
@@ -41,7 +41,9 @@ const ExpenseCalculator = () => {
     subcategory: '',
     amount: '',
     description: '',
-    entryCurrency: 'EUR'
+    entryCurrency: 'EUR',
+    date: new Date().toISOString().split('T')[0], // Default to today
+    time: new Date().toTimeString().slice(0, 5) // Default to current time
   });
   const [loading, setLoading] = useState(true);
   const [expenseView, setExpenseView] = useState('list');
@@ -53,10 +55,22 @@ const ExpenseCalculator = () => {
   const [selectedFileModal, setSelectedFileModal] = useState(null); // { transactionId, files }
   const [pendingFiles, setPendingFiles] = useState([]); // Files selected before expense creation
   const [editingId, setEditingId] = useState(null); // ID of expense being edited
+  const [selectedRecordModal, setSelectedRecordModal] = useState(null); // Record selected for modal view/edit
 
   useEffect(() => {
     loadExpenses();
   }, []);
+
+  useEffect(() => {
+    // Trigger header stats update when expenses change
+    if (!loading) {
+      // Small delay to ensure data is saved
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new Event('dataChanged'));
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [expenses, loading]);
 
   useEffect(() => {
     const loadFilesForAll = async () => {
@@ -79,7 +93,12 @@ const ExpenseCalculator = () => {
   const loadExpenses = async () => {
     try {
       const allExpenses = await db.expenses.toArray();
+      console.log('📋 ExpenseCalculator loaded expenses:', allExpenses.length, allExpenses);
       setExpenses(allExpenses);
+      // Trigger header update after loading expenses
+      setTimeout(() => {
+        window.dispatchEvent(new Event('dataChanged'));
+      }, 200);
     } catch (error) {
       console.error('Error loading expenses:', error);
     } finally {
@@ -95,13 +114,18 @@ const ExpenseCalculator = () => {
     }
 
     try {
+      // Combine date and time into ISO string
+      const dateTime = formData.date && formData.time 
+        ? new Date(`${formData.date}T${formData.time}`).toISOString()
+        : new Date().toISOString();
+      
       const expenseId = await db.expenses.add({
         category: formData.category,
         subcategory: formData.subcategory || '',
         amount: parseFloat(formData.amount),
         description: formData.description || '',
-        date: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
+        date: dateTime,
+        createdAt: dateTime,
         files: [],
         entryCurrency: formData.entryCurrency || 'EUR'
       });
@@ -123,8 +147,11 @@ const ExpenseCalculator = () => {
         category: '',
         subcategory: '',
         amount: '',
+        originalAmount: '',
         description: '',
-        entryCurrency: 'EUR'
+        entryCurrency: 'EUR',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0, 5)
       });
       await loadExpenses();
       // Trigger header stats update
@@ -190,12 +217,16 @@ const ExpenseCalculator = () => {
 
   const startEdit = (expense) => {
     setEditingId(expense.id);
+    const expenseDate = expense.date ? new Date(expense.date) : new Date(expense.createdAt);
     setFormData({
       category: expense.category || '',
       subcategory: expense.subcategory || '',
       amount: expense.amount || '',
+      originalAmount: expense.originalAmount || expense.amount || '',
       description: expense.description || '',
-      entryCurrency: expense.entryCurrency || 'EUR'
+      entryCurrency: expense.entryCurrency || 'EUR',
+      date: expenseDate.toISOString().split('T')[0],
+      time: expenseDate.toTimeString().slice(0, 5)
     });
   };
 
@@ -205,8 +236,11 @@ const ExpenseCalculator = () => {
       category: '',
       subcategory: '',
       amount: '',
+      originalAmount: '',
       description: '',
-      entryCurrency: 'EUR'
+      entryCurrency: 'EUR',
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toTimeString().slice(0, 5)
     });
   };
 
@@ -218,11 +252,18 @@ const ExpenseCalculator = () => {
     }
 
     try {
+      // Combine date and time into ISO string
+      const dateTime = formData.date && formData.time 
+        ? new Date(`${formData.date}T${formData.time}`).toISOString()
+        : new Date().toISOString();
+      
       await db.expenses.update(editingId, {
         category: formData.category,
         subcategory: formData.subcategory || '',
-        amount: parseFloat(formData.amount),
+        amount: parseFloat(formData.amount), // Stored in EUR
+        originalAmount: formData.originalAmount || parseFloat(formData.amount), // Original entered amount
         description: formData.description || '',
+        date: dateTime,
         entryCurrency: formData.entryCurrency || 'EUR'
       });
       setEditingId(null);
@@ -230,8 +271,11 @@ const ExpenseCalculator = () => {
         category: '',
         subcategory: '',
         amount: '',
+        originalAmount: '',
         description: '',
-        entryCurrency: 'EUR'
+        entryCurrency: 'EUR',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0, 5)
       });
       await loadExpenses();
       // Trigger header stats update
@@ -273,8 +317,19 @@ const ExpenseCalculator = () => {
       filtered = filtered.filter(expense => expense.category === categoryFilter);
     }
     
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(expense => 
+        (expense.category || '').toLowerCase().includes(query) ||
+        (expense.subcategory || '').toLowerCase().includes(query) ||
+        (expense.description || '').toLowerCase().includes(query) ||
+        (expense.amount || 0).toString().includes(query)
+      );
+    }
+    
     return filtered;
-  }, [expenses, startDate, endDate, categoryFilter]);
+  }, [expenses, startDate, endDate, categoryFilter, searchQuery]);
 
   const categoryData = useMemo(() => {
     const categories = {};
@@ -451,7 +506,8 @@ const ExpenseCalculator = () => {
                   setFormData({
                     ...formData,
                     amount: data.amount,
-                    entryCurrency: data.entryCurrency
+                    entryCurrency: data.entryCurrency,
+                    originalAmount: data.originalAmount
                   });
                 }}
                 label="Amount"
@@ -465,6 +521,26 @@ const ExpenseCalculator = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
                 />
+              </div>
+              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div className="form-group">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Time</label>
+                  <input
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
               <div className="form-group">
                 <label>Attach Bill/Receipt (Optional)</label>
@@ -563,78 +639,25 @@ const ExpenseCalculator = () => {
 
 
       <div className="expense-list-section">
-        <DateRangePicker
+        <CompactControls
+          viewType={expenseView}
+          onViewChange={setExpenseView}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={setCategoryFilter}
+          categories={categories}
           startDate={startDate}
           endDate={endDate}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
-          onClear={() => {
+          onClearFilters={() => {
             setStartDate('');
             setEndDate('');
+            setCategoryFilter('all');
+            setSearchQuery('');
           }}
         />
-        
-        <div className="expense-filters">
-          <div className="filter-row">
-            <div className="filter-group">
-              <label>Search</label>
-              <div className="search-input-wrapper">
-                <Search size={18} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search expenses..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="search-input"
-                />
-              </div>
-            </div>
-            <div className="filter-group">
-              <label>Filter by Category</label>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="category-filter-select"
-              >
-              <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-              </select>
-            </div>
-          </div>
-          <div className="quick-filter-buttons">
-            <button
-              className={`quick-filter-btn ${categoryFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setCategoryFilter('all')}
-            >
-              All
-            </button>
-            {categories.slice(0, 5).map(cat => (
-              <button
-                key={cat}
-                className={`quick-filter-btn ${categoryFilter === cat ? 'active' : ''}`}
-                onClick={() => setCategoryFilter(cat)}
-              >
-                {cat === 'Send Money to Parents' && <Mail size={16} className="icon-inline" />}
-                {cat}
-              </button>
-            ))}
-            {(startDate || endDate || categoryFilter !== 'all' || searchQuery) && (
-              <button
-                className="clear-filters-btn"
-                onClick={() => {
-                  setStartDate('');
-                  setEndDate('');
-                  setCategoryFilter('all');
-                  setSearchQuery('');
-                }}
-              >
-                Clear All Filters
-              </button>
-            )}
-          </div>
-        </div>
         
         <TableView
           title={`All Expenses${(startDate || endDate || categoryFilter !== 'all' || searchQuery) ? ' (Filtered)' : ''}`}

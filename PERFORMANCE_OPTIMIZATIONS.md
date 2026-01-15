@@ -62,3 +62,5 @@ The application has been optimized for minimal CPU and power consumption:
 
 The app is now lightweight and battery-friendly! 🚀
 
+
+

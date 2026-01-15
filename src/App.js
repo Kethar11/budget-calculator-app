@@ -61,10 +61,9 @@ function AppContent() {
         };
       } else {
         // In browser: restore from backend
-        restoreFromBackend(db);
+        await restoreFromBackend(db);
       }
     };
-    initStorage();
     
     const loadRealTimeStats = async () => {
       try {
@@ -74,22 +73,33 @@ function AppContent() {
         // Calculate all-time totals
         const totalIncome = transactions
           .filter(t => t.type === 'income')
-          .reduce((sum, t) => sum + (t.amount || 0), 0);
+          .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
         
         const totalExpenses = transactions
           .filter(t => t.type === 'expense')
-          .reduce((sum, t) => sum + (t.amount || 0), 0);
+          .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
         
         // Load savings (all-time)
         const savings = await db.savings.toArray();
-        const totalSavings = savings.reduce((sum, s) => sum + (s.amount || 0), 0);
+        const totalSavings = savings.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
 
-        // Load expenses (all-time) from expenses table
+        // Load expenses (all-time) from expenses table - THIS IS THE KEY!
         const expenseRecords = await db.expenses.toArray();
-        const totalExpenseAmount = expenseRecords.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const totalExpenseAmount = expenseRecords.reduce((sum, e) => {
+          const amount = parseFloat(e.amount) || 0;
+          return sum + amount;
+        }, 0);
 
         // Combine expenses from both transactions and expenses table
         const combinedTotalExpenses = totalExpenses + totalExpenseAmount;
+
+        console.log('📊 Header Stats Calculation:', {
+          transactionsExpenses: totalExpenses,
+          expensesTable: totalExpenseAmount,
+          combined: combinedTotalExpenses,
+          expenseRecordsCount: expenseRecords.length,
+          expenseRecords: expenseRecords.map(e => ({ id: e.id, amount: e.amount, category: e.category }))
+        });
 
         setRealTimeStats({
           totalBalance: totalIncome - combinedTotalExpenses,
@@ -103,6 +113,21 @@ function AppContent() {
       }
     };
 
+    // Initialize storage first
+    initStorage().then(() => {
+      // Load stats after data is restored (with multiple attempts to ensure data is loaded)
+      setTimeout(() => {
+        loadRealTimeStats();
+      }, 500);
+      setTimeout(() => {
+        loadRealTimeStats();
+      }, 1500);
+      setTimeout(() => {
+        loadRealTimeStats();
+      }, 3000);
+    });
+    
+    // Also load stats immediately (in case data is already loaded)
     loadRealTimeStats();
     
     // Update stats only when tab becomes visible (reduced CPU usage)

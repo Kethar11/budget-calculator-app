@@ -214,3 +214,5 @@ The backend service includes a health check that verifies the API is responding:
 3. Configure SSL/TLS for production deployment
 4. Set up backup strategies for data volumes
 
+
+

@@ -82,3 +82,5 @@ npm run electron
 - Works offline after initial load
 - Can be packaged as a standalone Mac/Windows/Linux app
 
+
+
