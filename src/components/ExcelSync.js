@@ -245,6 +245,9 @@ const ExcelSync = ({ onDataFetched }) => {
       });
 
       if (!response.ok) {
+        if (response.status === 0 || response.status === 404) {
+          throw new Error('Backend server not found. Excel sync requires a backend server running on localhost:8000. This feature is optional - all other features work without it!');
+        }
         throw new Error('Failed to update Excel');
       }
 

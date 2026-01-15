@@ -27,7 +27,7 @@
 .summary-card h2 {
   margin-bottom: 24px;
   color: #1e293b;
-  font-size: 1.4rem;
+  font-size: 1.1rem; /* Reduced from 1.4rem */
   font-weight: 600;
 }
 

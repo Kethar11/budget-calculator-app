@@ -3,33 +3,22 @@
   "version": "1.0.0",
   "description": "Complete Budget, Savings & Expense Calculator with Charts",
   "private": true,
-  "homepage": "https://Kethar11.github.io/budget-calculator-app",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "keywords": [
-    "budget",
-    "calculator",
-    "savings",
-    "expense",
-    "react",
-    "charts"
-  ],
+  "keywords": ["budget", "calculator", "savings", "expense", "react", "charts"],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "dexie": "^3.2.4",
-    "jspdf": "^2.5.2",
-    "jspdf-autotable": "^3.8.4",
-    "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "recharts": "^2.10.3",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "dexie": "^3.2.4"
   },
   "eslintConfig": {
     "extends": [
@@ -49,3 +38,4 @@
     ]
   }
 }
+
