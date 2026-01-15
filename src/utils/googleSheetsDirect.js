@@ -143,8 +143,14 @@ const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GOOGLE_SCRIPT_URL || '';
  */
 export const addRecordToGoogleSheets = async (record, type) => {
   if (!GOOGLE_SCRIPT_URL) {
-    console.warn('Google Script URL not configured. Please set up Google Apps Script.');
-    return { success: false, message: 'Google Script not configured' };
+    const errorMsg = 'Google Apps Script not configured. Please set up Google Apps Script to enable saving.\n\n' +
+      '1. Open your Google Sheet\n' +
+      '2. Go to Extensions → Apps Script\n' +
+      '3. Set up the script (see instructions)\n' +
+      '4. Deploy as Web App and get the URL\n' +
+      '5. Add REACT_APP_GOOGLE_SCRIPT_URL to your environment variables';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg, message: 'Google Script not configured' };
   }
 
   try {

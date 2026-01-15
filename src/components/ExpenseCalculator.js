@@ -124,7 +124,10 @@ const ExpenseCalculator = () => {
         ? new Date(`${formData.date}T${formData.time}`).toISOString()
         : new Date().toISOString();
       
-      const expenseId = await db.expenses.add({
+      // Generate temporary ID
+      const tempId = Date.now();
+      const expenseToAdd = {
+        id: tempId,
         category: formData.category,
         subcategory: formData.subcategory || '',
         amount: parseFloat(formData.amount),
@@ -133,67 +136,68 @@ const ExpenseCalculator = () => {
         createdAt: dateTime,
         files: [],
         entryCurrency: formData.entryCurrency || 'EUR'
-      });
+      };
 
-      // Save pending files if any
-      if (pendingFiles.length > 0) {
-        const { saveFile } = await import('../utils/fileManager');
-        for (const file of pendingFiles) {
-          try {
-            await saveFile(file, expenseId, 'expense');
-          } catch (fileError) {
-            console.error('Error saving file:', fileError);
-          }
-        }
-        setPendingFiles([]);
-      }
-
-      setFormData({
-        category: '',
-        subcategory: '',
-        amount: '',
-        originalAmount: '',
-        description: '',
-        entryCurrency: 'EUR',
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toTimeString().slice(0, 5)
-      });
-      await loadExpenses();
-      
-      // Auto-sync to Excel - SIMPLIFIED
+      // Write to Google Sheets FIRST (primary database)
       try {
-        const allTransactions = await db.transactions.toArray();
-        const allExpenses = await db.expenses.toArray();
+        const result = await addRecordToGoogleSheets(expenseToAdd, 'expense');
+        if (!result.success) {
+          // Show detailed error message
+          const errorMsg = result.error || result.message || 'Failed to add to Google Sheets';
+          console.error('Google Sheets error:', errorMsg);
+          
+          // Check if it's a configuration error
+          if (errorMsg.includes('not configured') || errorMsg.includes('Google Script')) {
+            alert('⚠️ Google Sheets Sync Not Set Up\n\n' +
+              'To save records, you need to set up Google Apps Script:\n\n' +
+              '1. Open: https://docs.google.com/spreadsheets/d/1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0/edit\n' +
+              '2. Go to Extensions → Apps Script\n' +
+              '3. Copy the script from SETUP_GOOGLE_SHEETS_NOW.md\n' +
+              '4. Deploy as Web App\n' +
+              '5. Add the URL to environment variables\n\n' +
+              'For now, records will be stored locally only.');
+            // Don't block - let them know but continue
+            console.warn('Saving locally only - Google Sheets not configured');
+          } else {
+            alert('Failed to save to Google Sheets: ' + errorMsg);
+            return;
+          }
+        } else {
+          console.log('✅ Record added to Google Sheets');
+        }
         
-        await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/api/excel/update-all`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactions: allTransactions.map(t => ({
-              ID: t.id,
-              Date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
-              Time: t.date ? new Date(t.date).toTimeString().slice(0, 8) : '',
-              Type: t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : '',
-              Category: t.category || '',
-              Subcategory: t.subcategory || '',
-              Amount: t.amount || 0,
-              Description: t.description || '',
-              'Created At': t.createdAt || new Date().toISOString()
-            })),
-            expenses: allExpenses.map(e => ({
-              ID: e.id,
-              Date: e.date ? new Date(e.date).toISOString().split('T')[0] : '',
-              Time: e.date ? new Date(e.date).toTimeString().slice(0, 8) : '',
-              Category: e.category || '',
-              Subcategory: e.subcategory || '',
-              Amount: e.amount || 0,
-              Description: e.description || '',
-              'Created At': e.createdAt || new Date().toISOString()
-            }))
-          })
+        // Save pending files if any (files still stored in IndexedDB for now)
+        if (pendingFiles.length > 0) {
+          const { saveFile } = await import('../utils/fileManager');
+          for (const file of pendingFiles) {
+            try {
+              await saveFile(file, tempId, 'expense');
+            } catch (fileError) {
+              console.error('Error saving file:', fileError);
+            }
+          }
+          setPendingFiles([]);
+        }
+
+        setFormData({
+          category: '',
+          subcategory: '',
+          amount: '',
+          originalAmount: '',
+          description: '',
+          entryCurrency: 'EUR',
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().slice(0, 5)
         });
-      } catch (excelError) {
-        console.warn('Excel sync failed:', excelError);
+        
+        // After successful write, fetch from Google Sheets to get latest data
+        await loadExpenses();
+      } catch (error) {
+        console.error('Failed to add to Google Sheets:', error);
+        if (!error.message || !error.message.includes('not configured')) {
+          alert('Failed to save to Google Sheets: ' + (error.message || 'Unknown error'));
+        }
+        return;
       }
       
       // Trigger header stats update

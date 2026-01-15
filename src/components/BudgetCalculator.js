@@ -92,7 +92,25 @@ const BudgetCalculator = () => {
       try {
         const result = await addRecordToGoogleSheets(recordToAdd, recordToAdd.type === 'income' ? 'income' : 'expense');
         if (!result.success) {
-          throw new Error(result.error || 'Failed to add to Google Sheets');
+          // Show detailed error message
+          const errorMsg = result.error || result.message || 'Failed to add to Google Sheets';
+          console.error('Google Sheets error:', errorMsg);
+          
+          // Check if it's a configuration error
+          if (errorMsg.includes('not configured') || errorMsg.includes('Google Script')) {
+            alert('⚠️ Google Sheets Sync Not Set Up\n\n' +
+              'To save records, you need to set up Google Apps Script:\n\n' +
+              '1. Open: https://docs.google.com/spreadsheets/d/1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0/edit\n' +
+              '2. Go to Extensions → Apps Script\n' +
+              '3. Copy the script from SETUP_GOOGLE_SHEETS_NOW.md\n' +
+              '4. Deploy as Web App\n' +
+              '5. Add the URL to environment variables\n\n' +
+              'For now, records will be stored locally only.');
+            throw new Error('Google Sheets not configured');
+          } else {
+            alert('Failed to save to Google Sheets: ' + errorMsg);
+            throw new Error(errorMsg);
+          }
         }
         console.log('✅ Record added to Google Sheets');
         
@@ -100,8 +118,13 @@ const BudgetCalculator = () => {
         await loadTransactions();
       } catch (error) {
         console.error('Failed to add to Google Sheets:', error);
-        alert('Failed to save to Google Sheets. Please check your connection and try again.');
-        throw error;
+        // Don't throw if it's just a configuration issue - let user know but don't block
+        if (error.message && error.message.includes('not configured')) {
+          // Still show the record locally for now
+          console.warn('Saving locally only - Google Sheets not configured');
+        } else {
+          throw error;
+        }
       }
       
       // Trigger data change event
