@@ -148,12 +148,9 @@ export const writeToGoogleSheets = async (transactions, expenses) => {
  * Export to Excel file (download) - Simple fallback
  */
 const exportToExcelFile = (transactions, expenses) => {
-  // Dynamic import for XLSX to avoid build issues
-  const XLSX = require('xlsx');
-  if (!XLSX) {
-    throw new Error('XLSX library not available');
-  }
-  const wb = XLSX.utils.book_new();
+  try {
+    const XLSX = require('xlsx');
+    const wb = XLSX.utils.book_new();
   
   const incomeData = transactions
     .filter(t => t.type === 'income')
@@ -177,13 +174,18 @@ const exportToExcelFile = (transactions, expenses) => {
     'Created At': e.createdAt || new Date().toISOString()
   }));
   
-  if (incomeData.length > 0) {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(incomeData), 'Income');
+    if (incomeData.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(incomeData), 'Income');
+    }
+    if (expenseData.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseData), 'Expense');
+    }
+    
+    const fileName = `budget_data_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    return { success: true, message: `Excel file downloaded: ${fileName}. Upload to Google Sheets manually.` };
+  } catch (error) {
+    console.error('Error exporting to Excel:', error);
+    return { success: false, error: 'Failed to export Excel file. ' + error.message };
   }
-  if (expenseData.length > 0) {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseData), 'Expense');
-  }
-  
-  XLSX.writeFile(wb, `budget_data_${new Date().toISOString().split('T')[0]}.xlsx`);
-  return { success: true, message: 'Excel file downloaded! Upload to Google Sheets manually.' };
 };
