@@ -247,10 +247,18 @@ const ExpenseCalculator = () => {
     try {
       // Delete associated files first
       await deleteFilesForTransaction(id, 'expense');
-      // Then delete the expense
+      // Delete from database
       await db.expenses.delete(id);
+      
+      // Delete from Google Sheets
+      try {
+        await deleteRecordFromGoogleSheets(id, 'expense');
+        console.log('✅ Record deleted from Google Sheets');
+      } catch (error) {
+        console.warn('Failed to delete from Google Sheets:', error);
+      }
+      
       await loadExpenses();
-      // Trigger header stats update
       window.dispatchEvent(new Event('dataChanged'));
     } catch (error) {
       console.error('Error deleting expense:', error);
@@ -298,6 +306,23 @@ const ExpenseCalculator = () => {
       const dateTime = formData.date && formData.time 
         ? new Date(`${formData.date}T${formData.time}`).toISOString()
         : new Date().toISOString();
+      
+      // Update in Google Sheets
+      try {
+        const updatedExpense = {
+          id: editingId,
+          category: formData.category,
+          subcategory: formData.subcategory || '',
+          amount: parseFloat(formData.amount),
+          description: formData.description || '',
+          date: dateTime,
+          createdAt: dateTime
+        };
+        await updateRecordInGoogleSheets(updatedExpense, 'expense');
+        console.log('✅ Record updated in Google Sheets');
+      } catch (error) {
+        console.warn('Failed to update in Google Sheets:', error);
+      }
       
       await db.expenses.update(editingId, {
         category: formData.category,
