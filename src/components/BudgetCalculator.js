@@ -7,7 +7,6 @@ import TableView from './TableView';
 import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
-import BudgetPlanner from './BudgetPlanner';
 import { autoSync } from '../utils/backendSync';
 import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
 import ExcelSync from './ExcelSync';

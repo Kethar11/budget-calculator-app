@@ -6,12 +6,8 @@ import './App.css';
 import BudgetCalculator from './components/BudgetCalculator';
 import SavingsCalculator from './components/SavingsCalculator';
 import ExpenseCalculator from './components/ExpenseCalculator';
-import BuyingGoals from './components/BuyingGoals';
-import Reminders from './components/Reminders';
 import FileBin from './components/FileBin';
 import Navigation from './components/Navigation';
-import CurrencySettings from './components/CurrencySettings';
-import DataExport from './components/DataExport';
 import { CurrencyProvider, useCurrency } from './contexts/CurrencyContext';
 import { TrendingUp, TrendingDown, PiggyBank, Wallet, Calculator } from 'lucide-react';
 
@@ -199,8 +195,7 @@ function AppContent() {
             </h1>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <DataExport />
-            <CurrencySettings onCurrencyChange={updateSettings} />
+            {/* Clean UI - removed unnecessary features */}
           </div>
         </div>
         <div className="header-stats">
@@ -252,8 +247,6 @@ function AppContent() {
           {activeTab === 'budget' && <BudgetCalculator />}
           {activeTab === 'savings' && <SavingsCalculator />}
           {activeTab === 'expense' && <ExpenseCalculator />}
-          {activeTab === 'goals' && <BuyingGoals />}
-          {activeTab === 'reminders' && <Reminders />}
           {activeTab === 'bin' && <FileBin />}
         </div>
       </div>
