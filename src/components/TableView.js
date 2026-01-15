@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, List, BarChart3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, List, BarChart3, Trash2 } from 'lucide-react';
 import './TableView.css';
 
-const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage, chartContent, onRowClick, onRowDoubleClick }) => {
+const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage, chartContent, onRowClick, onRowDoubleClick, onBulkDelete, showBulkDelete = false }) => {
   const [selectedRowId, setSelectedRowId] = useState(null);
+  const [selectedRows, setSelectedRows] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(20);
 
@@ -18,6 +19,7 @@ const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage,
   // Reset to page 1 when data changes
   React.useEffect(() => {
     setCurrentPage(1);
+    setSelectedRows(new Set()); // Clear selections when data changes
   }, [data.length]);
 
   const handlePageChange = (page) => {
@@ -56,21 +58,51 @@ const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage,
     <div className="table-view-container">
       <div className="table-header-compact">
         <h3>{title}</h3>
-        <div className="view-toggle-compact">
-          <button
-            className={`toggle-btn-compact ${viewType === 'list' ? 'active' : ''}`}
-            onClick={() => onViewChange('list')}
-            title="List View"
-          >
-            <List size={18} />
-          </button>
-          <button
-            className={`toggle-btn-compact ${viewType === 'chart' ? 'active' : ''}`}
-            onClick={() => onViewChange('chart')}
-            title="Chart View"
-          >
-            <BarChart3 size={18} />
-          </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {showBulkDelete && selectedRows.size > 0 && (
+            <button
+              className="bulk-delete-btn"
+              onClick={() => {
+                if (window.confirm(`Delete ${selectedRows.size} selected record(s)?`)) {
+                  onBulkDelete(Array.from(selectedRows));
+                  setSelectedRows(new Set());
+                }
+              }}
+              style={{
+                padding: '6px 12px',
+                background: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                fontWeight: '500'
+              }}
+              title={`Delete ${selectedRows.size} selected`}
+            >
+              <Trash2 size={16} />
+              Delete ({selectedRows.size})
+            </button>
+          )}
+          <div className="view-toggle-compact">
+            <button
+              className={`toggle-btn-compact ${viewType === 'list' ? 'active' : ''}`}
+              onClick={() => onViewChange('list')}
+              title="List View"
+            >
+              <List size={18} />
+            </button>
+            <button
+              className={`toggle-btn-compact ${viewType === 'chart' ? 'active' : ''}`}
+              onClick={() => onViewChange('chart')}
+              title="Chart View"
+            >
+              <BarChart3 size={18} />
+            </button>
+          </div>
         </div>
       </div>
       
@@ -81,6 +113,35 @@ const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage,
               <table className="data-table">
                 <thead>
                   <tr>
+                    {showBulkDelete && (
+                      <th style={{ width: '40px' }}>
+                        <input
+                          type="checkbox"
+                          checked={paginatedData.length > 0 && paginatedData.every(row => {
+                            const rowId = row.id || data.findIndex(r => r === row);
+                            return selectedRows.has(rowId);
+                          })}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const newSelected = new Set(selectedRows);
+                              paginatedData.forEach(row => {
+                                const rowId = row.id || data.findIndex(r => r === row);
+                                newSelected.add(rowId);
+                              });
+                              setSelectedRows(newSelected);
+                            } else {
+                              const newSelected = new Set(selectedRows);
+                              paginatedData.forEach(row => {
+                                const rowId = row.id || data.findIndex(r => r === row);
+                                newSelected.delete(rowId);
+                              });
+                              setSelectedRows(newSelected);
+                            }
+                          }}
+                          title="Select all on this page"
+                        />
+                      </th>
+                    )}
                     {columns.map((col, index) => (
                       <th key={index}>{col.header}</th>
                     ))}
@@ -88,16 +149,20 @@ const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage,
                 </thead>
                 <tbody>
                   {paginatedData.map((row, rowIndex) => {
-                    const rowId = row.id || startIndex + rowIndex;
+                    const rowId = row.id || data.findIndex(r => r === row);
                     const isSelected = selectedRowId === rowId;
+                    const isBulkSelected = selectedRows.has(rowId);
                     return (
                       <tr 
                         key={rowId}
-                        className={isSelected ? 'selected-row' : ''}
-                        onClick={() => {
-                          setSelectedRowId(rowId);
-                          if (onRowClick) {
-                            onRowClick(row);
+                        className={`${isSelected ? 'selected-row' : ''} ${isBulkSelected ? 'bulk-selected-row' : ''}`}
+                        onClick={(e) => {
+                          // Don't trigger row click if clicking checkbox
+                          if (e.target.type !== 'checkbox') {
+                            setSelectedRowId(rowId);
+                            if (onRowClick) {
+                              onRowClick(row);
+                            }
                           }
                         }}
                         onDoubleClick={() => {
@@ -108,6 +173,23 @@ const TableView = ({ data, columns, viewType, onViewChange, title, emptyMessage,
                         style={{ cursor: 'pointer' }}
                         title="Double-click to view/edit"
                       >
+                        {showBulkDelete && (
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isBulkSelected}
+                              onChange={(e) => {
+                                const newSelected = new Set(selectedRows);
+                                if (e.target.checked) {
+                                  newSelected.add(rowId);
+                                } else {
+                                  newSelected.delete(rowId);
+                                }
+                                setSelectedRows(newSelected);
+                              }}
+                            />
+                          </td>
+                        )}
                         {columns.map((col, colIndex) => (
                           <td key={colIndex}>
                             {col.render ? col.render(row[col.key], row) : row[col.key]}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useCurrency } from '../contexts/CurrencyContext';
+// Removed unused useCurrency import
 import AmountInput from './AmountInput';
-import { File } from 'lucide-react';
+// Removed unused File import
 
 /**
  * Expense Form Component for Modal (Read/Edit)

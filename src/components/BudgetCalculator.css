@@ -257,15 +257,68 @@
 
 .excel-section {
   margin-bottom: 30px;
+  margin-top: 20px;
+  width: 100%;
+  display: block;
+  visibility: visible;
+  opacity: 1;
 }
 
 @media (max-width: 768px) {
   .calculator-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
   
   .charts-section {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .chart-card {
+    padding: 16px;
+  }
+  
+  .chart-card h3 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .calculator-grid {
+    gap: 12px;
+  }
+  
+  .summary-card {
+    padding: 20px;
+  }
+  
+  .summary-card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+  }
+  
+  .summary-stats {
+    gap: 12px;
+  }
+  
+  .stat-item {
+    padding: 16px;
+  }
+  
+  .charts-section {
+    gap: 12px;
+  }
+  
+  .chart-card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+  
+  .chart-card h3 {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
   }
 }
 

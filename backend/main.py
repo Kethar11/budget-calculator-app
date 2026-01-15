@@ -151,26 +151,53 @@ def update_all_data(data: dict):
     from excel_storage import save_all_data, backup_excel_file
     
     try:
+        # Log what we're receiving
+        transaction_count = len(data.get('transactions', []))
+        expense_count = len(data.get('expenses', []))
+        print(f"📥 Received {transaction_count} transactions and {expense_count} expenses")
+        
         # Create backup before updating
         backup_excel_file()
         
         # Save all data to Excel
         result = save_all_data(data)
         
+        # Auto-sync to Google Sheets if configured
+        try:
+            from google_sheets import sync_to_google_sheets
+            google_result = sync_to_google_sheets()
+            if google_result.get("status") == "success":
+                print(f"✅ Auto-synced to Google Sheets: {google_result.get('rows_updated', 0)} rows")
+        except Exception as e:
+            print(f"⚠️  Google Sheets sync skipped: {e}")
+        
         return {
             "status": "success",
             "message": "Excel updated successfully",
-            "records_updated": result.get("total_records", 0)
+            "total_records": result.get("total_records", 0),
+            "income_count": result.get("income_count", 0),
+            "expense_count": result.get("expense_count", 0)
         }
     except Exception as e:
+        print(f"❌ Error updating Excel: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to update Excel: {str(e)}")
 
 @app.post("/api/google-sheets/sync")
 def sync_to_google_sheets():
     """Sync all data to Google Sheets"""
-    from google_sheets import sync_to_google_sheets
-    result = sync_to_google_sheets()
-    return result
+    try:
+        from google_sheets import sync_to_google_sheets
+        result = sync_to_google_sheets()
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "message": f"Google Sheets sync failed: {str(e)}. Please setup credentials.json (see GOOGLE_SHEETS_QUICK_SETUP.md). Excel sync works without it!"
+        }
 
 @app.post("/api/google-sheets/import")
 def import_from_google_sheets():
@@ -195,6 +222,28 @@ def upload_file_to_sheets(file_data: FileUploadData):
     from google_sheets import upload_file_to_google_sheets
     result = upload_file_to_google_sheets(file_data.dict())
     return result
+
+@app.post("/api/excel/clear-all")
+def clear_all_excel():
+    """Clear all data from Excel sheets (keeps structure)"""
+    from excel_storage import clear_all_data, backup_excel_file
+    
+    try:
+        # Create backup before clearing
+        backup_excel_file()
+        
+        # Clear all data
+        result = clear_all_data()
+        
+        return {
+            "status": "success",
+            "message": "Excel sheet cleared successfully! All data removed (backup created)."
+        }
+    except Exception as e:
+        print(f"❌ Error clearing Excel: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to clear Excel: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

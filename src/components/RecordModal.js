@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Edit2, Eye } from 'lucide-react';
+import { X, Edit2 } from 'lucide-react';
 import './RecordModal.css';
 
 /**

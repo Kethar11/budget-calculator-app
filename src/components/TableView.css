@@ -126,6 +126,35 @@
   color: #1e293b;
 }
 
+.data-table tbody tr.bulk-selected-row {
+  background: #fef3c7 !important;
+  border-left: 4px solid #f59e0b;
+}
+
+.data-table tbody tr.bulk-selected-row:hover {
+  background: #fde68a !important;
+}
+
+.bulk-delete-btn {
+  padding: 6px 12px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.bulk-delete-btn:hover {
+  background: #b91c1c;
+  transform: scale(1.02);
+}
+
 .data-table tbody tr:last-child td {
   border-bottom: none;
 }

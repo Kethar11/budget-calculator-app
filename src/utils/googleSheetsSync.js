@@ -7,7 +7,7 @@
  */
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-const GOOGLE_SHEET_ID = '1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0';
+// Google Sheet ID is configured in backend/google_sheets.py
 
 /**
  * Sync all data from Google Sheets to local IndexedDB

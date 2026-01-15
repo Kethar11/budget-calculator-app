@@ -1,20 +1,24 @@
 .excel-sync-container {
-  background: white;
+  background: white !important;
   border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e2e8f0;
+  padding: 20px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+  border: 2px solid #0f9d58 !important;
   margin-bottom: 20px;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100%;
 }
 
 .excel-sync-header {
-  display: flex;
+  display: flex !important;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e293b;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
 }
 
 .excel-sync-buttons {
@@ -24,19 +28,20 @@
 }
 
 .excel-sync-btn {
-  display: flex;
+  display: flex !important;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 14px 20px !important;
   border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  border-radius: 10px;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
   cursor: pointer;
   transition: all 0.2s;
   flex: 1;
-  min-width: 140px;
+  min-width: 180px !important;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .excel-sync-btn:disabled {
@@ -118,6 +123,136 @@
   }
 }
 
+/* Header version - compact for header */
+.excel-sync-container-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.excel-sync-btn-header {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px !important;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.excel-sync-btn-header:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.excel-sync-btn-header.fetch-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.excel-sync-btn-header.fetch-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}
+
+.excel-sync-btn-header.update-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.excel-sync-btn-header.update-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+.excel-sync-status-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  animation: slideIn 0.3s ease-out;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  z-index: 1000;
+  min-width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.excel-sync-status-header.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.excel-sync-status-header.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.excel-sync-status-header.info {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.excel-sync-status.info {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.header-excel-sync {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.excel-sync-btn-header.google-btn {
+  background: linear-gradient(135deg, #0f9d58 0%, #0d8047 100%) !important;
+  color: white !important;
+}
+
+.excel-sync-btn-header.google-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0d8047 0%, #0a6b3a 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 157, 88, 0.3);
+}
+
+.excel-sync-btn-header.clear-local-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: white !important;
+}
+
+.excel-sync-btn-header.clear-local-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+}
+
+.excel-sync-btn-header.clear-excel-btn {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+  color: white !important;
+}
+
+.excel-sync-btn-header.clear-excel-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
+}
+
 @media (max-width: 768px) {
   .excel-sync-container {
     padding: 12px;
@@ -134,6 +269,59 @@
 
   .excel-sync-header {
     font-size: 0.9rem;
+  }
+
+  .excel-sync-container-header {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .excel-sync-btn-header {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 14px !important;
+    font-size: 0.9rem !important;
+    min-height: 44px; /* Touch-friendly size */
+  }
+  
+  .excel-sync-btn-header svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .excel-sync-status-header {
+    position: fixed;
+    top: auto;
+    bottom: 20px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 400px;
+    margin-top: 0;
+    z-index: 9999;
+  }
+}
+
+@media (max-width: 480px) {
+  .excel-sync-btn-header {
+    padding: 14px 16px !important;
+    font-size: 0.95rem !important;
+    min-height: 48px; /* Larger for easier tapping */
+    font-weight: 700 !important;
+  }
+  
+  .excel-sync-btn-header svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .excel-sync-status-header {
+    width: calc(100% - 24px);
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    bottom: 16px;
   }
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, X, FileText, Download, Edit2, Check, Trash2 } from 'lucide-react';
-import { saveFile, moveFileToBin, renameFile, downloadFile, formatFileSize, isPDFFile, getFile } from '../utils/fileManager';
+import { saveFile, moveFileToBin, renameFile, downloadFile, formatFileSize, getFile } from '../utils/fileManager';
 import './FileUpload.css';
 
 const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFiles = [], compact = false }) => {

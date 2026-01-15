@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { Trash2, Download, Search, File, Edit2 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { Trash2, Search, File, Edit2 } from 'lucide-react';
 import { db } from '../utils/database';
 import TableView from './TableView';
 import DateRangePicker from './DateRangePicker';
@@ -9,7 +9,7 @@ import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { autoSync } from '../utils/backendSync';
-import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
+// Removed Electron storage
 import AmountInput from './AmountInput';
 import RecordModal from './RecordModal';
 import SavingsModalForm from './SavingsModalForm';
@@ -156,9 +156,7 @@ const SavingsCalculator = () => {
         autoSync(db, 'saving', savedSaving);
       }
       // Auto-sync to Electron storage
-      if (isElectron()) {
-        syncToElectronStorage(db);
-      }
+      // Removed Electron storage
     } catch (error) {
       console.error('Error adding savings:', error);
       alert('Error adding savings');
@@ -318,26 +316,7 @@ const SavingsCalculator = () => {
     return Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month));
   }, [filteredSavings]);
 
-  const exportToExcel = () => {
-    if (filteredSavings.length === 0) {
-      alert('No savings to export');
-      return;
-    }
-
-    const data = filteredSavings.map(saving => ({
-      'Account Type': saving.accountType || 'N/A',
-      'Amount (€)': saving.amount || 0,
-      'Deposit Date': saving.date ? new Date(saving.date).toLocaleDateString('en-US') : 'N/A',
-      'Maturity Date': saving.maturityDate ? new Date(saving.maturityDate).toLocaleDateString('en-US') : 'N/A',
-      'Interest Rate (%)': saving.interestRate || 0,
-      'Description': saving.description || 'N/A'
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Savings');
-    XLSX.writeFile(wb, `savings-${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
+  // Removed unused exportToExcel function - using ExcelSync component instead
 
   if (loading) {
     return <div className="loading">Loading...</div>;
@@ -649,29 +628,45 @@ const SavingsCalculator = () => {
           viewType={savingsView}
           onViewChange={setSavingsView}
           emptyMessage="No savings deposits yet. Add one above!"
+          showBulkDelete={true}
+          onBulkDelete={async (ids) => {
+            if (window.confirm(`Delete ${ids.length} selected savings deposit(s)?`)) {
+              try {
+                for (const id of ids) {
+                  await deleteFilesForTransaction(id, 'savings');
+                  await db.savings.delete(id);
+                }
+                await loadSavings();
+                window.dispatchEvent(new Event('dataChanged'));
+              } catch (error) {
+                console.error('Error deleting savings:', error);
+                alert('Error deleting some savings deposits');
+              }
+            }
+          }}
           chartContent={
             savingsView === 'chart' && filteredSavings.length > 0 ? (
               <div className="savings-charts-in-table">
                 <div className="chart-card">
                   <h3>Savings by Account Type</h3>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={350}>
                     <BarChart data={savingsByAccount}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value) => formatAmount(value)} />
                       <Bar dataKey="value" fill="#10b981" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="chart-card">
                   <h3>Monthly Savings Trend</h3>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={350}>
                     <LineChart data={monthlySavingsData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
-                      <Tooltip formatter={(value) => `€${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value) => formatAmount(value)} />
                       <Line type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={3} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -706,9 +701,7 @@ const SavingsCalculator = () => {
               if (updatedSaving) {
                 autoSync(db, 'saving', updatedSaving);
               }
-              if (isElectron()) {
-                syncToElectronStorage(db);
-              }
+              // Removed Electron storage
               setSelectedRecordModal(null);
             } catch (error) {
               console.error('Error updating savings:', error);

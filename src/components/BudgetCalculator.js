@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, TrendingUp, BarChart3, PieChart as PieChartIcon, Search, Trash2, File, Edit2 } from 'lucide-react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { TrendingUp, PieChart as PieChartIcon, Search, Trash2, File, Edit2 } from 'lucide-react';
+import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { db } from '../utils/database';
 import BudgetForm from './BudgetForm';
 import TableView from './TableView';
@@ -8,8 +8,7 @@ import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import { autoSync } from '../utils/backendSync';
-import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
-import ExcelSync from './ExcelSync';
+// Removed Electron storage
 import DateRangePicker from './DateRangePicker';
 import { useCurrency } from '../contexts/CurrencyContext';
 import RecordModal from './RecordModal';
@@ -22,7 +21,7 @@ const BudgetCalculator = () => {
   const { formatAmount, formatAmountWithSign } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [chartView, setChartView] = useState('monthly'); // monthly, weekly, yearly
+  const [chartView] = useState('monthly'); // Fixed to monthly for simplicity
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,6 +33,16 @@ const BudgetCalculator = () => {
 
   useEffect(() => {
     loadTransactions();
+    
+    // Reload when data changes (e.g., after fetch from Excel)
+    const handleDataChange = () => {
+      loadTransactions();
+    };
+    window.addEventListener('dataChanged', handleDataChange);
+    
+    return () => {
+      window.removeEventListener('dataChanged', handleDataChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -118,10 +127,7 @@ const BudgetCalculator = () => {
       if (savedTransaction) {
         autoSync(db, 'transaction', savedTransaction);
       }
-      // Auto-sync to Electron storage
-      if (isElectron()) {
-        syncToElectronStorage(db);
-      }
+      // Removed Electron storage
       return transactionId;
     } catch (error) {
       console.error('Error adding transaction:', error);
@@ -235,20 +241,6 @@ const BudgetCalculator = () => {
     })).sort((a, b) => b.value - a.value);
   }, [filteredTransactions]);
 
-  const incomeCategoryData = useMemo(() => {
-    const incomeCategories = {};
-    filteredTransactions
-      .filter(t => t.type === 'income')
-      .forEach(t => {
-        incomeCategories[t.category] = (incomeCategories[t.category] || 0) + (t.amount || 0);
-      });
-    
-    return Object.entries(incomeCategories).map(([name, value]) => ({
-      name,
-      value: parseFloat(value.toFixed(2))
-    })).sort((a, b) => b.value - a.value);
-  }, [filteredTransactions]);
-
   const getChartData = useMemo(() => {
     const data = {};
     filteredTransactions.forEach(t => {
@@ -349,18 +341,6 @@ const BudgetCalculator = () => {
                 />
               </div>
             </div>
-            <div className="filter-group">
-              <label>Filter by Type</label>
-              <select
-                value={transactionTypeFilter}
-                onChange={(e) => setTransactionTypeFilter(e.target.value)}
-                className="type-filter-select"
-              >
-                <option value="all">All Types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-              </select>
-            </div>
             {(startDate || endDate || transactionTypeFilter !== 'all' || searchQuery) && (
               <button
                 className="clear-filters-btn"
@@ -378,39 +358,13 @@ const BudgetCalculator = () => {
         </div>
       </div>
 
-      <div className="chart-view-selector">
-        <div className="view-buttons">
-          <button
-            className={`view-btn ${chartView === 'weekly' ? 'active' : ''}`}
-            onClick={() => setChartView('weekly')}
-          >
-            <Calendar size={16} />
-            Weekly
-          </button>
-          <button
-            className={`view-btn ${chartView === 'monthly' ? 'active' : ''}`}
-            onClick={() => setChartView('monthly')}
-          >
-            <Calendar size={16} />
-            Monthly
-          </button>
-          <button
-            className={`view-btn ${chartView === 'yearly' ? 'active' : ''}`}
-            onClick={() => setChartView('yearly')}
-          >
-            <Calendar size={16} />
-            Yearly
-          </button>
-        </div>
-      </div>
-
       <div className="charts-section">
         <div className="chart-card">
           <h3>
             <TrendingUp size={20} className="icon-inline" />
-            {chartView.charAt(0).toUpperCase() + chartView.slice(1)} Income vs Expenses
+            Monthly Income vs Expenses
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <LineChart data={getChartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="period" />
@@ -426,9 +380,9 @@ const BudgetCalculator = () => {
         <div className="chart-card">
           <h3>
             <PieChartIcon size={20} className="icon-inline" />
-            Expense Categories
+            Expense by Category
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
                 data={categoryData}
@@ -436,7 +390,7 @@ const BudgetCalculator = () => {
                 cy="50%"
                 labelLine={false}
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
+                outerRadius={120}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -448,52 +402,6 @@ const BudgetCalculator = () => {
             </PieChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="chart-card">
-          <h3>
-            <PieChartIcon size={20} className="icon-inline" />
-            Income Sources
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={incomeCategoryData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {incomeCategoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => formatAmount(value)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="chart-card">
-          <h3>
-            <BarChart3 size={20} className="icon-inline" />
-            Category Comparison
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={categoryData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip formatter={(value) => formatAmount(value)} />
-              <Bar dataKey="value" fill="#667eea" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="excel-section">
-        <ExcelSync />
       </div>
 
       <TableView
@@ -597,6 +505,22 @@ const BudgetCalculator = () => {
         ]}
         viewType="list"
         emptyMessage="No transactions recorded yet. Add one above!"
+        showBulkDelete={true}
+        onBulkDelete={async (ids) => {
+          if (window.confirm(`Delete ${ids.length} selected transaction(s)?`)) {
+            try {
+              for (const id of ids) {
+                await deleteFilesForTransaction(id, 'transaction');
+                await db.transactions.delete(id);
+              }
+              await loadTransactions();
+              window.dispatchEvent(new Event('dataChanged'));
+            } catch (error) {
+              console.error('Error deleting transactions:', error);
+              alert('Error deleting some transactions');
+            }
+          }
+        }}
       />
 
       {selectedFileModal && (
@@ -623,9 +547,7 @@ const BudgetCalculator = () => {
               if (updatedTransaction) {
                 autoSync(db, 'transaction', updatedTransaction);
               }
-              if (isElectron()) {
-                syncToElectronStorage(db);
-              }
+              // Removed Electron storage
               setSelectedRecordModal(null);
             } catch (error) {
               console.error('Error updating transaction:', error);

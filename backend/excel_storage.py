@@ -88,22 +88,33 @@ def get_sheet_data(wb, sheet_name: str) -> List[Dict]:
     data = []
     
     # Skip header row
+    if ws.max_row <= 1:
+        return []  # Only headers, no data
+    
+    headers = [cell.value for cell in ws[1] if cell.value]
+    
     for row in ws.iter_rows(min_row=2, values_only=False):
         row_data = {}
-        headers = [cell.value for cell in ws[1]]
+        has_data = False
         
         for idx, cell in enumerate(row):
             if idx < len(headers) and headers[idx]:
-                row_data[headers[idx]] = cell.value
+                value = cell.value
+                row_data[headers[idx]] = value
+                # Check if this cell has actual data (not None, not empty string, not just whitespace)
+                if value is not None and str(value).strip():
+                    has_data = True
         
-        # Only add non-empty rows
-        if any(row_data.values()):
+        # Only add rows that have at least one non-empty value
+        if has_data:
             data.append(row_data)
     
     return data
 
 def save_sheet_data(wb, sheet_name: str, data: List[Dict], headers: List[str]):
     """Save data to a sheet"""
+    print(f"📄 save_sheet_data: {sheet_name}, {len(data)} records")
+    
     if sheet_name not in wb.sheetnames:
         ws = wb.create_sheet(sheet_name)
         # Add headers
@@ -114,29 +125,41 @@ def save_sheet_data(wb, sheet_name: str, data: List[Dict], headers: List[str]):
     else:
         ws = wb[sheet_name]
         # Clear existing data (keep headers)
-        ws.delete_rows(2, ws.max_row)
+        if ws.max_row > 1:
+            ws.delete_rows(2, ws.max_row)
     
     # Write data
-    for row_num, row_data in enumerate(data, 2):
-        for col_num, header in enumerate(headers, 1):
-            value = row_data.get(header, '')
-            cell = ws.cell(row=row_num, column=col_num, value=value)
-            cell.border = Border(
-                left=Side(style='thin'),
-                right=Side(style='thin'),
-                top=Side(style='thin'),
-                bottom=Side(style='thin')
-            )
+    if data and len(data) > 0:
+        print(f"✍️  Writing {len(data)} rows to {sheet_name}...")
+        for row_num, row_data in enumerate(data, 2):
+            row_values = []
+            for col_num, header in enumerate(headers, 1):
+                value = row_data.get(header, '')
+                row_values.append(value)
+                cell = ws.cell(row=row_num, column=col_num, value=value)
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+            if row_num <= 3:  # Debug first few rows
+                print(f"   Row {row_num}: {row_values[:5]}...")
+    else:
+        print(f"⚠️  No data to write to {sheet_name}")
     
     # Auto-adjust column widths
-    for col_num in range(1, len(headers) + 1):
-        max_length = max(
-            len(str(ws.cell(row=row_num, column=col_num).value or ''))
-            for row_num in range(1, ws.max_row + 1)
-        )
-        ws.column_dimensions[get_column_letter(col_num)].width = min(max_length + 2, 30)
+    if ws.max_row > 1:
+        for col_num in range(1, len(headers) + 1):
+            max_length = max(
+                len(str(ws.cell(row=row_num, column=col_num).value or ''))
+                for row_num in range(1, ws.max_row + 1)
+            )
+            ws.column_dimensions[get_column_letter(col_num)].width = min(max_length + 2, 30)
     
+    print(f"💾 Saving workbook...")
     wb.save(EXCEL_FILE)
+    print(f"✅ Workbook saved! {sheet_name} now has {ws.max_row} rows")
 
 def backup_excel_file():
     """Create a timestamped backup of the Excel file"""
@@ -153,9 +176,15 @@ def load_all_data():
     """Load all data from Excel - SIMPLIFIED: Only Income and Expense"""
     wb = load_excel_file()
     
+    print(f"📂 Loading data from Excel file: {EXCEL_FILE}")
+    print(f"📋 Available sheets: {wb.sheetnames}")
+    
     # Load Income and Expense sheets
     income_data = get_sheet_data(wb, 'Income')
     expense_data = get_sheet_data(wb, 'Expense')
+    
+    print(f"💰 Income sheet: {len(income_data)} records")
+    print(f"💸 Expense sheet: {len(expense_data)} records")
     
     # Convert to transactions format for app compatibility
     transactions = []
@@ -188,33 +217,14 @@ def load_all_data():
             'Created At': expense.get('Created At')
         })
     
-    # Also load from monthly sheets
-    from datetime import datetime
-    current_year = datetime.now().year
-    months = ['January', 'February', 'March', 'April', 'May', 'June', 
-              'July', 'August', 'September', 'October', 'November', 'December']
-    
-    transaction_ids = {t.get('ID') for t in transactions if t.get('ID')}
-    
-    for year in [current_year - 1, current_year, current_year + 1]:
-        for month in months:
-            sheet_name = f"{month} {year}"
-            if sheet_name in wb.sheetnames:
-                month_data = get_sheet_data(wb, sheet_name)
-                for item in month_data:
-                    if item.get('ID') and item.get('ID') not in transaction_ids:
-                        transactions.append({
-                            'ID': item.get('ID'),
-                            'Date': item.get('Date'),
-                            'Time': item.get('Time'),
-                            'Type': item.get('Type', 'Expense'),
-                            'Category': item.get('Category'),
-                            'Subcategory': item.get('Subcategory'),
-                            'Amount': item.get('Amount'),
-                            'Description': item.get('Description'),
-                            'Created At': item.get('Created At')
-                        })
-                        transaction_ids.add(item.get('ID'))
+    # IMPORTANT: DO NOT load from monthly sheets if main sheets are empty
+    # Monthly sheets are only for organization when saving, not as a data source when fetching
+    # If main Income/Expense sheets are empty, Excel is truly empty
+    # This prevents confusion where Excel looks empty but fetch returns old data from monthly sheets
+    if not transactions:
+        print("ℹ️  Main Income and Expense sheets are empty. Excel file is empty.")
+        print("   Monthly sheets are NOT checked - they are only for organization, not data storage.")
+        print("   To add data: Use the app to add transactions, then click 'Update Excel'.")
     
     # Convert to expenses format (for Expense Calculator)
     expenses = []
@@ -229,6 +239,8 @@ def load_all_data():
             'Description': expense.get('Description'),
             'Created At': expense.get('Created At')
         })
+    
+    print(f"📊 Returning: {len(transactions)} transactions, {len(expenses)} expenses")
     
     return {
         'transactions': transactions,
@@ -305,6 +317,20 @@ def update_summary(wb):
     income_total = sum(float(i.get('Amount', 0) or 0) for i in income_data)
     expense_total = sum(float(e.get('Amount', 0) or 0) for e in expense_data)
     balance = income_total - expense_total
+    
+    # Get or create Summary sheet
+    if 'Summary' not in wb.sheetnames:
+        ws = wb.create_sheet('Summary')
+        headers = ['Metric', 'Value', 'Last Updated']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            cell.font = Font(bold=True, color="FFFFFF", size=11)
+    else:
+        ws = wb['Summary']
+        # Clear existing data (keep headers)
+        if ws.max_row > 1:
+            ws.delete_rows(2, ws.max_row)
     
     summary_data = [
         {'Metric': 'Total Income', 'Value': f'€{income_total:.2f}', 'Last Updated': datetime.now().isoformat()},
@@ -402,6 +428,10 @@ def save_to_monthly_sheet(wb, data, sheet_base_name, headers):
 
 def save_all_data(data: Dict):
     """Save all data to Excel - SIMPLIFIED: Only Income and Expense"""
+    print(f"📝 save_all_data called with keys: {list(data.keys())}")
+    print(f"📊 Transactions count: {len(data.get('transactions', []))}")
+    print(f"📊 Expenses count: {len(data.get('expenses', []))}")
+    
     wb = load_excel_file()
     
     # Create backup before updating
@@ -480,22 +510,141 @@ def save_all_data(data: Dict):
                 print(f"Error processing expense: {err}")
                 continue
     
-    # Save Income sheet
-    if income_records:
-        headers = ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At', 'Updated At']
-        save_to_monthly_sheet(wb, income_records, 'Income', headers)
-        total_records += len(income_records)
+    # Save Income sheet (even if empty, to clear old data)
+    headers = ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At', 'Updated At']
+    print(f"💰 Income records to save: {len(income_records)}")
+    print(f"💸 Expense records to save: {len(expense_records)}")
     
-    # Save Expense sheet
+    # Always save Income sheet (use save_sheet_data to ensure proper saving)
+    if income_records:
+        print(f"💾 Saving {len(income_records)} income records to Income sheet...")
+        save_sheet_data(wb, 'Income', income_records, headers)
+        total_records += len(income_records)
+        print(f"✅ Income records saved")
+    else:
+        print("⚠️  No income records to save - clearing Income sheet")
+        # Clear Income sheet if no records
+        if 'Income' in wb.sheetnames:
+            ws = wb['Income']
+            if ws.max_row > 1:
+                ws.delete_rows(2, ws.max_row)
+            wb.save(EXCEL_FILE)
+    
+    # Always save Expense sheet (use save_sheet_data to ensure proper saving)
     if expense_records:
-        headers = ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At', 'Updated At']
-        save_to_monthly_sheet(wb, expense_records, 'Expense', headers)
+        print(f"💾 Saving {len(expense_records)} expense records to Expense sheet...")
+        save_sheet_data(wb, 'Expense', expense_records, headers)
         total_records += len(expense_records)
+        print(f"✅ Expense records saved")
+    else:
+        print("⚠️  No expense records to save - clearing Expense sheet")
+        # Clear Expense sheet if no records
+        if 'Expense' in wb.sheetnames:
+            ws = wb['Expense']
+            if ws.max_row > 1:
+                ws.delete_rows(2, ws.max_row)
+            wb.save(EXCEL_FILE)
     
     # Update summary
     update_summary(wb)
     
-    return {"total_records": total_records, "status": "success"}
+    # IMPORTANT: Save the workbook after all updates
+    try:
+        wb.save(EXCEL_FILE)
+        print(f"✅ Excel file saved successfully with {total_records} records")
+    except Exception as e:
+        print(f"❌ Error saving Excel file: {e}")
+        raise
+    
+    return {"total_records": total_records, "status": "success", "income_count": len(income_records), "expense_count": len(expense_records)}
+
+def clear_all_data():
+    """Clear all data from Excel sheets (keeps structure and headers)"""
+    wb = load_excel_file()
+    
+    print(f"🗑️  Clearing all data from Excel file: {EXCEL_FILE}")
+    print(f"📋 Available sheets: {wb.sheetnames}")
+    
+    cleared_sheets = []
+    
+    # Clear Income sheet
+    if 'Income' in wb.sheetnames:
+        ws = wb['Income']
+        rows_before = ws.max_row
+        if ws.max_row > 1:
+            ws.delete_rows(2, ws.max_row)
+            cleared_sheets.append('Income')
+            print(f"✅ Cleared Income sheet: {rows_before - 1} rows deleted (now only headers)")
+        else:
+            print(f"ℹ️  Income sheet already empty")
+    
+    # Clear Expense sheet
+    if 'Expense' in wb.sheetnames:
+        ws = wb['Expense']
+        rows_before = ws.max_row
+        if ws.max_row > 1:
+            ws.delete_rows(2, ws.max_row)
+            cleared_sheets.append('Expense')
+            print(f"✅ Cleared Expense sheet: {rows_before - 1} rows deleted (now only headers)")
+        else:
+            print(f"ℹ️  Expense sheet already empty")
+    
+    # Clear all monthly sheets
+    from datetime import datetime
+    current_year = datetime.now().year
+    months = ['January', 'February', 'March', 'April', 'May', 'June', 
+              'July', 'August', 'September', 'October', 'November', 'December']
+    
+    monthly_cleared = 0
+    monthly_rows_cleared = 0
+    for year in [current_year - 1, current_year, current_year + 1]:
+        for month in months:
+            sheet_name = f"{month} {year}"
+            if sheet_name in wb.sheetnames:
+                ws = wb[sheet_name]
+                rows_before = ws.max_row
+                if ws.max_row > 1:
+                    ws.delete_rows(2, ws.max_row)
+                    monthly_cleared += 1
+                    monthly_rows_cleared += (rows_before - 1)
+    
+    if monthly_cleared > 0:
+        print(f"✅ Cleared {monthly_cleared} monthly sheets: {monthly_rows_cleared} total rows deleted")
+    else:
+        print(f"ℹ️  No monthly sheets to clear or already empty")
+    
+    # Clear Summary sheet data (keep structure)
+    if 'Summary' in wb.sheetnames:
+        ws = wb['Summary']
+        if ws.max_row > 1:
+            ws.delete_rows(2, ws.max_row)
+        # Add zero values
+        ws.cell(row=2, column=1, value='Total Income')
+        ws.cell(row=2, column=2, value=0)
+        ws.cell(row=2, column=3, value=datetime.now().isoformat())
+        ws.cell(row=3, column=1, value='Total Expense')
+        ws.cell(row=3, column=2, value=0)
+        ws.cell(row=3, column=3, value=datetime.now().isoformat())
+        ws.cell(row=4, column=1, value='Balance')
+        ws.cell(row=4, column=2, value=0)
+        ws.cell(row=4, column=3, value=datetime.now().isoformat())
+        cleared_sheets.append('Summary')
+        print(f"✅ Cleared Summary sheet and reset to zeros")
+    
+    # IMPORTANT: Save the file
+    try:
+        wb.save(EXCEL_FILE)
+        print(f"💾 Excel file saved successfully!")
+        print(f"📊 Summary: Cleared {len(cleared_sheets)} main sheets ({', '.join(cleared_sheets)}) and {monthly_cleared} monthly sheets")
+        print(f"✅ Excel file is now EMPTY (only headers remain)")
+    except Exception as e:
+        print(f"❌ Error saving Excel file: {e}")
+        raise
+    
+    return {
+        "status": "success", 
+        "message": f"All data cleared from Excel! Cleared {len(cleared_sheets)} main sheets and {monthly_cleared} monthly sheets. Excel file is now empty."
+    }
 
 
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Mail, Trash2, File, Search, Edit2, X } from 'lucide-react';
+import { Mail, Trash2, File, Edit2 } from 'lucide-react';
 import TableView from './TableView';
 import CompactControls from './CompactControls';
 import FileUpload from './FileUpload';
@@ -7,7 +7,7 @@ import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { autoSync } from '../utils/backendSync';
-import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
+// Removed Electron storage
 import AmountInput from './AmountInput';
 import RecordModal from './RecordModal';
 import ExpenseModalForm from './ExpenseModalForm';
@@ -15,18 +15,13 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   LineChart,
   Line,
-  AreaChart,
-  Area
 } from 'recharts';
 import { db } from '../utils/database';
 import './ExpenseCalculator.css';
@@ -59,6 +54,16 @@ const ExpenseCalculator = () => {
 
   useEffect(() => {
     loadExpenses();
+    
+    // Reload when data changes (e.g., after fetch from Excel)
+    const handleDataChange = () => {
+      loadExpenses();
+    };
+    window.addEventListener('dataChanged', handleDataChange);
+    
+    return () => {
+      window.removeEventListener('dataChanged', handleDataChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -391,19 +396,6 @@ const ExpenseCalculator = () => {
       monthly[monthKey].amount += expense.amount || 0;
     });
     return Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month));
-  }, [filteredExpenses]);
-
-  const dailyExpenseData = useMemo(() => {
-    const daily = {};
-    filteredExpenses.forEach(expense => {
-      const date = new Date(expense.date || expense.createdAt);
-      const dayKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      if (!daily[dayKey]) {
-        daily[dayKey] = { day: dayKey, amount: 0 };
-      }
-      daily[dayKey].amount += expense.amount || 0;
-    });
-    return Object.values(daily).slice(-30).sort((a, b) => new Date(a.day) - new Date(b.day));
   }, [filteredExpenses]);
 
   const totalExpenses = useMemo(() => {
@@ -818,12 +810,28 @@ const ExpenseCalculator = () => {
           viewType={expenseView}
           onViewChange={setExpenseView}
           emptyMessage="No expenses recorded yet. Add one above!"
+          showBulkDelete={true}
+          onBulkDelete={async (ids) => {
+            if (window.confirm(`Delete ${ids.length} selected expense(s)?`)) {
+              try {
+                for (const id of ids) {
+                  await deleteFilesForTransaction(id, 'expense');
+                  await db.expenses.delete(id);
+                }
+                await loadExpenses();
+                window.dispatchEvent(new Event('dataChanged'));
+              } catch (error) {
+                console.error('Error deleting expenses:', error);
+                alert('Error deleting some expenses');
+              }
+            }
+          }}
           chartContent={
             expenseView === 'chart' ? (
               <div className="expense-charts-in-table">
                 <div className="chart-card">
                   <h3>Expenses by Category</h3>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={350}>
                     <PieChart>
                       <Pie
                         data={categoryData}
@@ -831,7 +839,7 @@ const ExpenseCalculator = () => {
                         cy="50%"
                         labelLine={false}
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
+                        outerRadius={120}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -845,7 +853,7 @@ const ExpenseCalculator = () => {
                 </div>
                 <div className="chart-card">
                   <h3>Monthly Expenses Trend</h3>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={350}>
                     <LineChart data={monthlyExpenseData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
@@ -853,30 +861,6 @@ const ExpenseCalculator = () => {
                       <Tooltip formatter={(value) => formatAmount(value)} />
                       <Line type="monotone" dataKey="amount" stroke="#ef4444" strokeWidth={3} />
                     </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="chart-card">
-                  <h3>Category Comparison</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={categoryData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => formatAmount(value)} />
-                      <Bar dataKey="value" fill="#ef4444" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="chart-card">
-                  <h3>Daily Expenses (Last 30 Days)</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={dailyExpenseData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="day" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => formatAmount(value)} />
-                      <Area type="monotone" dataKey="amount" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
-                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
@@ -907,9 +891,7 @@ const ExpenseCalculator = () => {
               if (updatedExpense) {
                 autoSync(db, 'expense', updatedExpense);
               }
-              if (isElectron()) {
-                syncToElectronStorage(db);
-              }
+              // Removed Electron storage
               setSelectedRecordModal(null);
               // Trigger header stats update
               window.dispatchEvent(new Event('dataChanged'));

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './utils/database';
 import { restoreFromBackend } from './utils/backendSync';
-import { initElectronStorage, restoreFromElectronStorage, syncToElectronStorage } from './utils/electronStorage';
+// Removed Electron storage - using IndexedDB only
 import './App.css';
 import BudgetCalculator from './components/BudgetCalculator';
 import SavingsCalculator from './components/SavingsCalculator';
@@ -9,11 +9,13 @@ import ExpenseCalculator from './components/ExpenseCalculator';
 import FileBin from './components/FileBin';
 import Navigation from './components/Navigation';
 import { CurrencyProvider, useCurrency } from './contexts/CurrencyContext';
-import { TrendingUp, TrendingDown, PiggyBank, Wallet, Calculator } from 'lucide-react';
+import { TrendingUp, TrendingDown, PiggyBank, Wallet, Calculator, FileSpreadsheet, ExternalLink, LogOut } from 'lucide-react';
+import ExcelSync from './components/ExcelSync';
+import Login from './components/Login';
 
-function AppContent() {
+function AppContent({ onLogout }) {
   const [activeTab, setActiveTab] = useState('budget');
-  const { formatAmount, updateSettings } = useCurrency();
+  const { formatAmount } = useCurrency();
   const [realTimeStats, setRealTimeStats] = useState({
     totalBalance: 0,
     totalIncome: 0,
@@ -23,43 +25,12 @@ function AppContent() {
   });
 
   useEffect(() => {
-    let syncInterval = null;
-    let cleanupFn = null;
     let googleSheetsCleanup = null;
     
-    // Initialize Electron storage and restore data
+    // Initialize storage - restore from backend
     const initStorage = async () => {
-      const isElectron = await initElectronStorage();
-      if (isElectron) {
-        // In Electron: restore from local files first, then sync
-        await restoreFromElectronStorage(db);
-        // Auto-sync IndexedDB changes to files (reduced frequency for performance)
-        // Only sync when app is active, every 60 seconds instead of 5
-        const handleVisibilityChange = () => {
-          if (document.hidden) {
-            if (syncInterval) {
-              clearInterval(syncInterval);
-              syncInterval = null;
-            }
-          } else {
-            if (!syncInterval) {
-              syncInterval = setInterval(() => syncToElectronStorage(db), 60000); // Sync every 60 seconds
-            }
-          }
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        syncInterval = setInterval(() => syncToElectronStorage(db), 60000);
-        
-        cleanupFn = () => {
-          if (syncInterval) {
-            clearInterval(syncInterval);
-          }
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-      } else {
-        // In browser: restore from backend
-        await restoreFromBackend(db);
-      }
+      // Restore from backend (Excel sync)
+      await restoreFromBackend(db);
 
       // Initialize Google Sheets sync (works on both web and mobile)
       try {
@@ -179,7 +150,6 @@ function AppContent() {
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('dataChanged', handleDataChange);
-      if (cleanupFn) cleanupFn();
       if (googleSheetsCleanup) googleSheetsCleanup();
     };
   }, []);
@@ -194,8 +164,34 @@ function AppContent() {
               Budget Calculator
             </h1>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            {/* Clean UI - removed unnecessary features */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+            <a
+              href="https://docs.google.com/spreadsheets/d/1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0/edit"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="google-sheet-link"
+              title="Open Google Sheet - Click to view your data"
+              onClick={(e) => {
+                e.preventDefault();
+                window.open('https://docs.google.com/spreadsheets/d/1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0/edit', '_blank', 'noopener,noreferrer');
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <FileSpreadsheet size={28} className="google-sheet-icon" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '0.9rem', fontWeight: '600', whiteSpace: 'nowrap' }}>Google Sheet</span>
+              <ExternalLink size={14} className="external-link-icon" style={{ flexShrink: 0 }} />
+            </a>
+            <div className="header-excel-sync">
+              <ExcelSync onDataFetched={(tab) => setActiveTab(tab)} />
+            </div>
+            <button
+              onClick={onLogout}
+              className="logout-button"
+              title="Logout"
+            >
+              <LogOut size={18} />
+              Logout
+            </button>
           </div>
         </div>
         <div className="header-stats">
@@ -259,9 +255,26 @@ function AppContent() {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('isAuthenticated') === 'true';
+  });
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated');
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <CurrencyProvider>
-      <AppContent />
+      <AppContent onLogout={handleLogout} />
     </CurrencyProvider>
   );
 }

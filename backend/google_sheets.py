@@ -22,18 +22,24 @@ CREDENTIALS_FILE = os.getenv('GOOGLE_CREDENTIALS_FILE', 'credentials.json')
 
 def get_google_client():
     """Get authenticated Google Sheets client"""
-    if not os.path.exists(CREDENTIALS_FILE):
-        print(f"Warning: Google credentials file not found at {CREDENTIALS_FILE}")
-        print("Google Sheets sync will be disabled. Set GOOGLE_CREDENTIALS_FILE environment variable.")
-        return None
+    # Try service account first (if credentials.json exists)
+    if os.path.exists(CREDENTIALS_FILE):
+        try:
+            creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+            client = gspread.authorize(creds)
+            print("✅ Using service account credentials")
+            return client
+        except Exception as e:
+            print(f"⚠️  Error with service account: {e}")
     
-    try:
-        creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
-        client = gspread.authorize(creds)
-        return client
-    except Exception as e:
-        print(f"Error authenticating with Google Sheets: {e}")
-        return None
+    # For public sheets, we can try using gspread without credentials
+    # But this requires the sheet to be shared with "Anyone with the link can edit"
+    print(f"⚠️  No credentials.json found. Trying public sheet access...")
+    print(f"📝 Make sure your Google Sheet is shared as 'Anyone with the link can edit'")
+    print(f"🔗 Sheet ID: {SPREADSHEET_ID}")
+    
+    # Return None - we'll handle public sheets differently if needed
+    return None
 
 def get_or_create_spreadsheet(client, spreadsheet_id: Optional[str] = None):
     """Get existing spreadsheet or create new one"""
@@ -49,23 +55,40 @@ def get_or_create_spreadsheet(client, spreadsheet_id: Optional[str] = None):
     return spreadsheet
 
 def sync_to_google_sheets():
-    """Sync all Excel data to Google Sheets"""
-    if not SPREADSHEET_ID and not CREDENTIALS_FILE:
-        return {"status": "disabled", "message": "Google Sheets not configured"}
+    """Sync all Excel data to Google Sheets - UPDATED: Only Income and Expense"""
+    if not SPREADSHEET_ID:
+        return {"status": "disabled", "message": "Google Sheet ID not configured"}
     
-    client = get_google_client()
-    if not client:
-        return {"status": "error", "message": "Failed to authenticate with Google"}
+    try:
+        client = get_google_client()
+        if not client:
+            return {
+                "status": "info", 
+                "message": "Google Sheets sync is optional. Excel sync works without it! To enable: See GOOGLE_SHEETS_SIMPLE.md (5 min setup)."
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Google Sheets authentication failed: {str(e)}. Please setup credentials.json (see GOOGLE_SHEETS_QUICK_SETUP.md). Excel sync works without it!"
+        }
     
     try:
         spreadsheet = get_or_create_spreadsheet(client, SPREADSHEET_ID)
         data = load_all_data()
         
-        # Sync each sheet
-        sheets_to_sync = ['Transactions', 'Expenses', 'Savings', 'Budgets', 'Summary']
+        # UPDATED: Sync only Income and Expense sheets (matching Excel structure)
+        sheets_to_sync = {
+            'Income': data.get('transactions', []),
+            'Expense': data.get('expenses', []),
+            'Summary': data.get('summary', [])
+        }
         
-        for sheet_name in sheets_to_sync:
-            sheet_data = data.get(sheet_name.lower(), [])
+        total_rows = 0
+        
+        for sheet_name, sheet_data in sheets_to_sync.items():
+            # Filter Income transactions
+            if sheet_name == 'Income':
+                sheet_data = [t for t in sheet_data if (t.get('Type') or '').lower() == 'income']
             
             # Get or create worksheet
             try:
@@ -76,7 +99,7 @@ def sync_to_google_sheets():
             # Clear existing data
             worksheet.clear()
             
-            if sheet_data:
+            if sheet_data and len(sheet_data) > 0:
                 # Convert to DataFrame for easier handling
                 df = pd.DataFrame(sheet_data)
                 
@@ -90,50 +113,70 @@ def sync_to_google_sheets():
                     'textFormat': {'bold': True, 'foregroundColor': {'red': 1, 'green': 1, 'blue': 1}}
                 })
                 
-                # Write data
+                # Write data rows
                 for _, row in df.iterrows():
-                    worksheet.append_row([str(val) if val is not None else '' for val in row.values])
+                    row_values = [str(val) if val is not None else '' for val in row.values]
+                    worksheet.append_row(row_values)
+                    total_rows += 1
         
         return {
             "status": "success",
-            "message": "Data synced to Google Sheets",
-            "spreadsheet_url": spreadsheet.url,
-            "spreadsheet_id": spreadsheet.id
+            "message": f"Data synced to Google Sheets successfully! {total_rows} rows updated.",
+            "spreadsheet_url": f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit",
+            "spreadsheet_id": SPREADSHEET_ID,
+            "rows_updated": total_rows
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"status": "error", "message": f"Failed to sync: {str(e)}"}
 
 def sync_from_google_sheets():
-    """Import data from Google Sheets to Excel and return for frontend"""
-    if not SPREADSHEET_ID and not CREDENTIALS_FILE:
-        return {"status": "disabled", "message": "Google Sheets not configured"}
+    """Import data from Google Sheets to Excel and return for frontend - UPDATED: Only Income and Expense"""
+    if not SPREADSHEET_ID:
+        return {"status": "disabled", "message": "Google Sheet ID not configured"}
     
     client = get_google_client()
     if not client:
-        return {"status": "error", "message": "Failed to authenticate with Google"}
+        return {"status": "error", "message": "Failed to authenticate with Google. Please setup credentials.json"}
     
     try:
         spreadsheet = get_or_create_spreadsheet(client, SPREADSHEET_ID)
-        sheets_to_sync = ['Transactions', 'Expenses', 'Savings', 'Budgets']
+        sheets_to_sync = ['Income', 'Expense']  # UPDATED: Only Income and Expense
         
-        imported_data = {}
+        imported_data = {
+            'transactions': [],
+            'expenses': []
+        }
         
-        for sheet_name in sheets_to_sync:
-            try:
-                worksheet = spreadsheet.worksheet(sheet_name)
-                records = worksheet.get_all_records()
-                imported_data[sheet_name.lower()] = records
-            except Exception as e:
-                print(f"Warning: Could not read sheet {sheet_name}: {e}")
-                imported_data[sheet_name.lower()] = []
+        # Import Income sheet
+        try:
+            worksheet = spreadsheet.worksheet('Income')
+            records = worksheet.get_all_records()
+            # Convert to transactions format
+            for record in records:
+                record['Type'] = 'Income'
+                imported_data['transactions'].append(record)
+        except Exception as e:
+            print(f"Warning: Could not read Income sheet: {e}")
+        
+        # Import Expense sheet
+        try:
+            worksheet = spreadsheet.worksheet('Expense')
+            records = worksheet.get_all_records()
+            imported_data['expenses'] = records
+        except Exception as e:
+            print(f"Warning: Could not read Expense sheet: {e}")
         
         return {
             "status": "success",
-            "message": "Data imported from Google Sheets",
+            "message": f"Data imported from Google Sheets: {len(imported_data['transactions'])} transactions, {len(imported_data['expenses'])} expenses",
             "data": imported_data,
-            "spreadsheet_url": spreadsheet.url
+            "spreadsheet_url": f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit"
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"status": "error", "message": f"Failed to import: {str(e)}"}
 
 def upload_file_to_google_sheets(file_data: Dict):

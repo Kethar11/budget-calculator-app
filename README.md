@@ -1,164 +1,121 @@
-# Complete Financial Calculator - Budget, Savings & Expense Tracker
+# Budget Calculator App
 
-A comprehensive financial management web application built with React. Features beautiful charts, internal storage using IndexedDB, and Excel export functionality. **100% Open Source** - No paid services, uses only system storage.
+A complete web-based Budget, Savings & Expense Calculator with beautiful charts and Excel sync.
 
-## Features
+## 🚀 Live App
 
-### 💰 Budget Calculator
-- Track income and expenses
-- Real-time budget summary with balance calculation
-- Beautiful charts: Monthly trends, category breakdowns, income sources
-- Excel export functionality
-- Filter and sort transactions
+**https://Kethar11.github.io/budget-calculator-app**
 
-### 💰 Savings Calculator
-- Set multiple savings goals
-- Calculate months to reach your goal
-- Project savings growth with interest calculations
-- Visual progress tracking with charts
-- Monthly contribution planning
+### Login Credentials
+- **Username:** `jasper`
+- **Password:** `780788`
 
-### 💸 Expense Calculator
-- Detailed expense tracking by category
-- Multiple chart visualizations (pie, bar, line, area charts)
-- Monthly and daily expense trends
-- Category-wise expense analysis
-- Average expense calculations
+---
 
-## Tech Stack
+## ✨ Features
 
-- **Frontend**: React 18
-- **Charts**: Recharts (open source)
-- **Storage**: IndexedDB via Dexie (browser storage - no backend needed!)
-- **Excel**: XLSX library (open source)
-- **License**: MIT
+- ✅ **Budget Calculator** - Track income and expenses
+- ✅ **Savings Calculator** - Track deposits and savings
+- ✅ **Expense Calculator** - Detailed expense tracking
+- ✅ **File Upload** - Attach PDFs to transactions
+- ✅ **Charts & Graphs** - Visualize your financial data
+- ✅ **Date Range Filtering** - Filter by custom date ranges
+- ✅ **Category Filtering** - Filter by categories
+- ✅ **Search** - Search across all records
+- ✅ **Bulk Delete** - Delete multiple records at once
+- ✅ **Excel Sync** - Fetch/Update/Clear Excel data
+- ✅ **Simple Login** - Username/Password authentication
+- ✅ **Mobile Responsive** - Works on all devices
 
-## Prerequisites
+---
 
-- Node.js (v16 or higher)
-- npm or yarn
-- **OR** Docker and Docker Compose (for containerized deployment)
+## 🛠️ Development
 
-## Installation
-
-### Option 1: Docker (Recommended)
-
-```bash
-# Build and start all services
-docker-compose up --build
-
-# Access the application:
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-```
-
-See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed Docker instructions.
-
-### Option 2: Local Development
+### Local Development
 
 ```bash
 # Install dependencies
 npm install
-```
 
-## Running the Application
-
-### Development Mode
-
-```bash
+# Start development server
 npm start
+
+# Open http://localhost:3000
 ```
 
-This will start the React development server on `http://localhost:3000`
-
-The app will automatically open in your browser.
-
-### Building for Production
+### Build for Production
 
 ```bash
 npm run build
 ```
 
-This creates an optimized production build in the `build` folder.
+---
 
-## Project Structure
+## 📦 Deployment
 
-```
-.
-├── public/              # Public assets
-│   └── index.html
-├── src/
-│   ├── components/     # React components
-│   │   ├── BudgetCalculator.js
-│   │   ├── SavingsCalculator.js
-│   │   ├── ExpenseCalculator.js
-│   │   └── Navigation.js
-│   ├── utils/          # Utilities
-│   │   └── database.js # IndexedDB setup
-│   ├── App.js          # Main app component
-│   └── index.js        # Entry point
-├── package.json
-└── README.md
-```
+### Automatic Deployment
 
-## Usage
+**The app automatically deploys when you push to `main` branch!**
 
-### Budget Calculator
-1. Click on "Budget" tab
-2. Add income or expense transactions
-3. View real-time summary and charts
-4. Export data to Excel
+1. Create a feature branch:
+   ```bash
+   git checkout -b feature/my-feature
+   ```
 
-### Savings Calculator
-1. Click on "Savings" tab
-2. Add a savings goal with current amount, target, and monthly contribution
-3. View projections and progress charts
-4. Track multiple savings goals
+2. Make changes and commit:
+   ```bash
+   git add .
+   git commit -m "Add feature"
+   git push origin feature/my-feature
+   ```
 
-### Expense Calculator
-1. Click on "Expenses" tab
-2. Add expenses by category
-3. View detailed analytics and trends
-4. Analyze spending patterns
+3. Merge to main (auto-deploys):
+   ```bash
+   git checkout main
+   git merge feature/my-feature
+   git push origin main
+   ```
 
-## Storage
+4. Wait 2-3 minutes for GitHub Actions to deploy
 
-**100% Local Storage** - All data is stored in your browser using IndexedDB:
-- No backend required
-- No database setup needed
-- Data persists in your browser
-- Completely private and secure
-- Works offline
+5. Check live site: https://Kethar11.github.io/budget-calculator-app
 
-## Excel Export
-
-Export your budget transactions to Excel format for external analysis:
-- Click "Export to Excel" button
-- File downloads automatically
-- Includes all transaction details
-
-## Charts & Visualizations
-
-The app includes beautiful, interactive charts:
-- **Pie Charts**: Category breakdowns
-- **Bar Charts**: Comparisons and trends
-- **Line Charts**: Time-based trends
-- **Area Charts**: Savings projections
-
-All charts are responsive and interactive.
-
-## License
-
-MIT License - Free to use, modify, and distribute.
-
-## Contributing
-
-Contributions are welcome! This is an open source project.
-
-## Support
-
-For issues or questions, please open an issue on GitHub.
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 
 ---
 
-**Note**: This application uses only open-source libraries and browser storage. No paid services, no external databases, no backend required. Everything runs locally in your browser!
+## 📋 Tech Stack
+
+- **React** - Frontend framework
+- **IndexedDB (Dexie)** - Local database storage
+- **Recharts** - Chart library
+- **Lucide React** - Icons
+- **GitHub Pages** - Hosting
+- **GitHub Actions** - Automatic deployment
+
+---
+
+## 🔐 Security
+
+- Simple username/password authentication
+- All data stored locally in browser (IndexedDB)
+- No backend required for basic functionality
+- Excel sync optional (requires backend)
+
+---
+
+## 📝 License
+
+MIT License
+
+---
+
+## 🆘 Support
+
+For issues or questions, check:
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Deployment guide
+- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Troubleshooting tips
+
+---
+
+**Made with ❤️ for simple budget management**
