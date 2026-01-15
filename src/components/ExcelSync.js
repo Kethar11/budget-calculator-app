@@ -3,7 +3,9 @@ import { Download, Upload, CheckCircle, AlertCircle, X, Trash2, Database } from 
 import { db } from '../utils/database';
 import './ExcelSync.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+// Excel sync is optional - requires backend server
+// For now, this feature is disabled in production
+const BACKEND_URL = 'http://localhost:8000';
 
 const ExcelSync = ({ onDataFetched }) => {
   const [syncing, setSyncing] = useState(false);
@@ -35,7 +37,7 @@ const ExcelSync = ({ onDataFetched }) => {
     if (!backendRunning) {
       setStatus({ 
         type: 'error', 
-        message: 'Backend server is not running! Please start it: cd backend && source venv/bin/activate && python main.py' 
+        message: 'Excel sync requires a backend server. This feature is optional - all other features work without it!' 
       });
       setSyncing(false);
       return;
@@ -179,7 +181,7 @@ const ExcelSync = ({ onDataFetched }) => {
     if (!backendRunning) {
       setStatus({ 
         type: 'error', 
-        message: 'Backend server is not running! Please start it: cd backend && source venv/bin/activate && python main.py' 
+        message: 'Excel sync requires a backend server. This feature is optional - all other features work without it!' 
       });
       setSyncing(false);
       return;
@@ -326,7 +328,7 @@ const ExcelSync = ({ onDataFetched }) => {
     if (!backendRunning) {
       setStatus({ 
         type: 'error', 
-        message: 'Backend server is not running! Please start it: cd backend && source venv/bin/activate && python main.py' 
+        message: 'Excel sync requires a backend server. This feature is optional - all other features work without it!' 
       });
       setSyncing(false);
       return;
