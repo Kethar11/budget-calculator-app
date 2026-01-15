@@ -128,7 +128,13 @@ export const readFromGoogleSheets = async () => {
 
 /**
  * Google Apps Script Web App URL
- * Set this in your environment or create the script (see instructions below)
+ * 
+ * TO ENABLE GOOGLE SHEETS SYNC:
+ * 1. Set up Google Apps Script (see QUICK_GOOGLE_SHEETS_SETUP.md)
+ * 2. Get your Web App URL
+ * 3. Replace the empty string below with your URL
+ * 
+ * Example: const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_ID/exec';
  */
 const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GOOGLE_SCRIPT_URL || '';
 
