@@ -546,12 +546,21 @@ const BudgetCalculator = () => {
             try {
               await db.transactions.update(selectedRecordModal.id, updatedData);
               await loadTransactions();
-              const updatedTransaction = await db.transactions.get(selectedRecordModal.id);
-              if (updatedTransaction) {
-                autoSync(db, 'transaction', updatedTransaction);
+              
+              // Update in Google Sheets
+              try {
+                const updatedTransaction = await db.transactions.get(selectedRecordModal.id);
+                if (updatedTransaction) {
+                  const transactionType = updatedTransaction.type === 'income' ? 'income' : 'expense';
+                  await updateRecordInGoogleSheets(updatedTransaction, transactionType);
+                  console.log('✅ Record updated in Google Sheets');
+                }
+              } catch (error) {
+                console.warn('Failed to update in Google Sheets:', error);
               }
-              // Removed Electron storage
+              
               setSelectedRecordModal(null);
+              window.dispatchEvent(new Event('dataChanged'));
             } catch (error) {
               console.error('Error updating transaction:', error);
               alert('Error updating transaction');

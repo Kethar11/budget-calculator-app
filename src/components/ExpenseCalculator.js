@@ -918,13 +918,19 @@ const ExpenseCalculator = () => {
             try {
               await db.expenses.update(selectedRecordModal.id, updatedData);
               await loadExpenses();
-              const updatedExpense = await db.expenses.get(selectedRecordModal.id);
-              if (updatedExpense) {
-                autoSync(db, 'expense', updatedExpense);
+              
+              // Update in Google Sheets
+              try {
+                const updatedExpense = await db.expenses.get(selectedRecordModal.id);
+                if (updatedExpense) {
+                  await updateRecordInGoogleSheets(updatedExpense, 'expense');
+                  console.log('✅ Record updated in Google Sheets');
+                }
+              } catch (error) {
+                console.warn('Failed to update in Google Sheets:', error);
               }
-              // Removed Electron storage
+              
               setSelectedRecordModal(null);
-              // Trigger header stats update
               window.dispatchEvent(new Event('dataChanged'));
             } catch (error) {
               console.error('Error updating expense:', error);
