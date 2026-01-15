@@ -205,9 +205,15 @@
 }
 
 @media (max-width: 768px) {
+  .App {
+    padding: 10px;
+    padding-bottom: 30px;
+  }
+
   .main-container {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 15px;
+    padding: 0 10px;
   }
   
   .left-panel {
@@ -216,6 +222,40 @@
   
   .right-panel {
     order: 2;
+  }
+
+  .App-header {
+    padding: 15px 10px;
+    margin-left: -10px;
+    margin-right: -10px;
+    margin-top: -10px;
+  }
+
+  .header-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .stat-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
   }
 }
 

@@ -145,6 +145,26 @@ def get_all_data():
     """Get all data from Excel (transactions, expenses, savings, budgets)"""
     return load_all_data()
 
+@app.post("/api/excel/update-all")
+def update_all_data(data: dict):
+    """Update Excel with all data from frontend"""
+    from excel_storage import save_all_data, backup_excel_file
+    
+    try:
+        # Create backup before updating
+        backup_excel_file()
+        
+        # Save all data to Excel
+        result = save_all_data(data)
+        
+        return {
+            "status": "success",
+            "message": "Excel updated successfully",
+            "records_updated": result.get("total_records", 0)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update Excel: {str(e)}")
+
 @app.post("/api/google-sheets/sync")
 def sync_to_google_sheets():
     """Sync all data to Google Sheets"""
@@ -157,6 +177,23 @@ def import_from_google_sheets():
     """Import data from Google Sheets"""
     from google_sheets import sync_from_google_sheets
     result = sync_from_google_sheets()
+    return result
+
+class FileUploadData(BaseModel):
+    fileId: int
+    fileName: str
+    fileType: str
+    fileSize: int
+    fileData: str  # Base64 encoded
+    transactionId: int
+    transactionType: str
+    uploadedAt: str
+
+@app.post("/api/google-sheets/upload-file")
+def upload_file_to_sheets(file_data: FileUploadData):
+    """Upload file metadata to Google Sheets"""
+    from google_sheets import upload_file_to_google_sheets
+    result = upload_file_to_google_sheets(file_data.dict())
     return result
 
 if __name__ == "__main__":

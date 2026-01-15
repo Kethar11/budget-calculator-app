@@ -10,7 +10,7 @@ import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/file
 import BudgetPlanner from './BudgetPlanner';
 import { autoSync } from '../utils/backendSync';
 import { syncToElectronStorage, isElectron } from '../utils/electronStorage';
-import ExcelExport from './ExcelExport';
+import ExcelSync from './ExcelSync';
 import DateRangePicker from './DateRangePicker';
 import { useCurrency } from '../contexts/CurrencyContext';
 import RecordModal from './RecordModal';
@@ -77,6 +77,63 @@ const BudgetCalculator = () => {
         entryCurrency: transaction.entryCurrency || 'EUR'
       });
       await loadTransactions();
+      
+      // Auto-sync to Excel
+      try {
+        const allTransactions = await db.transactions.toArray();
+        const allExpenses = await db.expenses.toArray();
+        const allSavings = await db.savings.toArray();
+        const allBudgets = await db.budgets.toArray();
+        
+        await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/api/excel/update-all`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactions: allTransactions.map(t => ({
+              ID: t.id,
+              Date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
+              Time: t.date ? new Date(t.date).toTimeString().slice(0, 8) : '',
+              Type: t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : '',
+              Category: t.category || '',
+              Subcategory: t.subcategory || '',
+              Amount: t.amount || 0,
+              Description: t.description || '',
+              'Created At': t.createdAt || new Date().toISOString()
+            })),
+            expenses: allExpenses.map(e => ({
+              ID: e.id,
+              Date: e.date ? new Date(e.date).toISOString().split('T')[0] : '',
+              Time: e.date ? new Date(e.date).toTimeString().slice(0, 8) : '',
+              Category: e.category || '',
+              Subcategory: e.subcategory || '',
+              Amount: e.amount || 0,
+              Description: e.description || '',
+              'Created At': e.createdAt || new Date().toISOString()
+            })),
+            savings: allSavings.map(s => ({
+              ID: s.id,
+              Date: s.date ? new Date(s.date).toISOString().split('T')[0] : '',
+              Time: s.date ? new Date(s.date).toTimeString().slice(0, 8) : '',
+              'Account Type': s.accountType || '',
+              Amount: s.amount || 0,
+              'Maturity Date': s.maturityDate ? new Date(s.maturityDate).toISOString().split('T')[0] : '',
+              'Interest Rate': s.interestRate || 0,
+              Description: s.description || '',
+              'Created At': s.createdAt || new Date().toISOString()
+            })),
+            budgets: allBudgets.map(b => ({
+              ID: b.id,
+              Category: b.category || '',
+              'Monthly Limit': b.monthlyLimit || 0,
+              Description: b.description || '',
+              'Created At': b.createdAt || new Date().toISOString()
+            }))
+          })
+        });
+      } catch (excelError) {
+        console.warn('Excel sync failed:', excelError);
+      }
+      
       // Auto-sync to backend
       const savedTransaction = await db.transactions.get(transactionId);
       if (savedTransaction) {
@@ -459,7 +516,7 @@ const BudgetCalculator = () => {
       <BudgetPlanner transactions={transactions} />
 
       <div className="excel-section">
-        <ExcelExport transactions={transactions} />
+        <ExcelSync />
       </div>
 
       <TableView

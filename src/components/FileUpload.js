@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, X, File, Image, FileText, Download, Eye, Edit2, Check, Trash2 } from 'lucide-react';
-import { saveFile, moveFileToBin, renameFile, downloadFile, formatFileSize, isImageFile, isPDFFile, getFile } from '../utils/fileManager';
+import { Upload, X, FileText, Download, Edit2, Check, Trash2 } from 'lucide-react';
+import { saveFile, moveFileToBin, renameFile, downloadFile, formatFileSize, isPDFFile, getFile } from '../utils/fileManager';
 import './FileUpload.css';
 
 const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFiles = [], compact = false }) => {
   const [files, setFiles] = useState(existingFiles);
   const [uploading, setUploading] = useState(false);
-  const [previewFile, setPreviewFile] = useState(null);
   const [editingFileId, setEditingFileId] = useState(null);
   const [editFileName, setEditFileName] = useState('');
 
@@ -14,29 +13,14 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
     setFiles(existingFiles);
   }, [existingFiles]);
 
-  const acceptedFormats = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/bmp',
-    'image/tiff',
-    'image/tif',
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-  ];
+  // Only accept PDFs for simplicity
+  const acceptedFormats = ['application/pdf'];
 
   const handleFileSelect = async (e) => {
     const selectedFiles = Array.from(e.target.files);
     const validFiles = selectedFiles.filter(file => {
       if (!acceptedFormats.includes(file.type)) {
-        alert(`${file.name} is not a supported file type. Supported formats: Images (JPG, PNG, GIF, WEBP, BMP, TIFF), PDF, Word, Excel, PowerPoint.`);
+        alert(`${file.name} is not a PDF file. Only PDF files are supported.`);
         return false;
       }
       if (file.size > 10 * 1024 * 1024) { // 10MB limit
@@ -54,6 +38,14 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
       for (const file of validFiles) {
         const fileId = await saveFile(file, transactionId, transactionType);
         newFileIds.push(fileId);
+        
+        // Sync to Google Sheets
+        try {
+          await syncFileToGoogleSheets(file, fileId, transactionId, transactionType);
+        } catch (syncError) {
+          console.warn('Failed to sync file to Google Sheets:', syncError);
+          // Continue even if sync fails
+        }
       }
 
       // Reload files
@@ -71,6 +63,44 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
     } finally {
       setUploading(false);
       e.target.value = ''; // Reset input
+    }
+  };
+
+  // Sync file to Google Sheets
+  const syncFileToGoogleSheets = async (file, fileId, transactionId, transactionType) => {
+    try {
+      // Convert file to base64 for Google Sheets
+      const fileData = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Send to backend for Google Sheets sync
+      const response = await fetch('http://localhost:8000/api/google-sheets/upload-file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileId,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          fileData: fileData,
+          transactionId,
+          transactionType,
+          uploadedAt: new Date().toISOString()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sync to Google Sheets');
+      }
+    } catch (error) {
+      console.error('Error syncing file to Google Sheets:', error);
+      throw error;
     }
   };
 
@@ -129,35 +159,26 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
     downloadFile(fileRecord);
   };
 
-  const handlePreview = (fileRecord) => {
-    setPreviewFile(fileRecord);
-  };
-
-  const getFileIcon = (fileType) => {
-    if (isImageFile(fileType)) {
-      return <Image size={18} />;
-    } else if (isPDFFile(fileType)) {
-      return <FileText size={18} />;
-    }
-    return <File size={18} />;
+  const getFileIcon = () => {
+    return <FileText size={18} />; // Only PDFs, so always show PDF icon
   };
 
   if (compact) {
     return (
       <div className="file-upload-compact">
-        <label className="file-upload-compact-label" title="Add/View Files">
-          <File size={14} />
+        <label className="file-upload-compact-label" title="Add PDF Files">
+          <FileText size={14} />
           <input
             type="file"
             multiple
-            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+            accept=".pdf,application/pdf"
             onChange={handleFileSelect}
             className="file-input"
             disabled={uploading || !transactionId}
           />
         </label>
         {files.length > 0 && (
-          <span className="file-count-badge" title={`${files.length} file(s) attached`}>
+          <span className="file-count-badge" title={`${files.length} PDF(s) attached`}>
             {files.length}
           </span>
         )}
@@ -167,12 +188,7 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
               <div key={file.id || index} className="file-dropdown-item">
                 <span>{file.fileName}</span>
                 <div className="file-dropdown-actions">
-                  {isImageFile(file.fileType) && (
-                    <button onClick={() => handlePreview(file)} title="Preview">
-                      <Eye size={12} />
-                    </button>
-                  )}
-                  <button onClick={() => handleDownload(file)} title="Download">
+                  <button onClick={() => handleDownload(file)} title="Download PDF">
                     <Download size={12} />
                   </button>
                   <button onClick={() => handleStartRename(file)} title="Rename">
@@ -186,27 +202,6 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
             ))}
           </div>
         )}
-        {previewFile && (
-          <div className="file-preview-modal" onClick={() => setPreviewFile(null)}>
-            <div className="file-preview-content" onClick={(e) => e.stopPropagation()}>
-              <button className="close-preview" onClick={() => setPreviewFile(null)}>
-                <X size={24} />
-              </button>
-              {isImageFile(previewFile.fileType) ? (
-                <img src={previewFile.fileData} alt={previewFile.fileName} className="preview-image" />
-              ) : (
-                <iframe src={previewFile.fileData} className="preview-iframe" title={previewFile.fileName} />
-              )}
-              <div className="preview-footer">
-                <span>{previewFile.fileName}</span>
-                <button onClick={() => handleDownload(previewFile)} className="download-btn">
-                  <Download size={16} />
-                  Download
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -216,18 +211,18 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
       <div className="file-upload-section">
         <label className="file-upload-label">
           <Upload size={18} />
-          <span>Attach Files (Optional)</span>
-          <span className="file-upload-hint">Images, PDFs, Word, Excel, PowerPoint (Max 10MB each)</span>
+          <span>Attach PDF Files (Optional)</span>
+          <span className="file-upload-hint">PDF files only - will sync to Google Sheets (Max 10MB each)</span>
         </label>
         <input
           type="file"
           multiple
-          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+          accept=".pdf,application/pdf"
           onChange={handleFileSelect}
           className="file-input"
           disabled={uploading || !transactionId}
         />
-        {uploading && <div className="uploading-indicator">Uploading...</div>}
+        {uploading && <div className="uploading-indicator">Uploading & syncing to Google Sheets...</div>}
       </div>
 
       {files.length > 0 && (
@@ -283,19 +278,10 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
                 <div className="file-actions">
                   {editingFileId !== file.id && (
                     <>
-                      {isImageFile(file.fileType) && (
-                        <button
-                          className="file-action-btn"
-                          onClick={() => handlePreview(file)}
-                          title="Preview"
-                        >
-                          <Eye size={14} />
-                        </button>
-                      )}
                       <button
                         className="file-action-btn"
                         onClick={() => handleDownload(file)}
-                        title="Download"
+                        title="Download PDF"
                       >
                         <Download size={14} />
                       </button>
@@ -322,27 +308,6 @@ const FileUpload = ({ transactionId, transactionType, onFilesChange, existingFil
         </div>
       )}
 
-      {previewFile && (
-        <div className="file-preview-modal" onClick={() => setPreviewFile(null)}>
-          <div className="file-preview-content" onClick={(e) => e.stopPropagation()}>
-            <button className="close-preview" onClick={() => setPreviewFile(null)}>
-              <X size={24} />
-            </button>
-            {isImageFile(previewFile.fileType) ? (
-              <img src={previewFile.fileData} alt={previewFile.fileName} className="preview-image" />
-            ) : (
-              <iframe src={previewFile.fileData} className="preview-iframe" title={previewFile.fileName} />
-            )}
-            <div className="preview-footer">
-              <span>{previewFile.fileName}</span>
-              <button onClick={() => handleDownload(previewFile)} className="download-btn">
-                <Download size={16} />
-                Download
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

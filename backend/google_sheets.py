@@ -16,7 +16,8 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-SPREADSHEET_ID = os.getenv('GOOGLE_SHEET_ID', '')
+# Default to user's Google Sheet if not set
+SPREADSHEET_ID = os.getenv('GOOGLE_SHEET_ID', '1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0')
 CREDENTIALS_FILE = os.getenv('GOOGLE_CREDENTIALS_FILE', 'credentials.json')
 
 def get_google_client():
@@ -103,16 +104,16 @@ def sync_to_google_sheets():
         return {"status": "error", "message": f"Failed to sync: {str(e)}"}
 
 def sync_from_google_sheets():
-    """Import data from Google Sheets to Excel"""
-    if not SPREADSHEET_ID:
-        return {"status": "error", "message": "Google Sheet ID not configured"}
+    """Import data from Google Sheets to Excel and return for frontend"""
+    if not SPREADSHEET_ID and not CREDENTIALS_FILE:
+        return {"status": "disabled", "message": "Google Sheets not configured"}
     
     client = get_google_client()
     if not client:
         return {"status": "error", "message": "Failed to authenticate with Google"}
     
     try:
-        spreadsheet = client.open_by_key(SPREADSHEET_ID)
+        spreadsheet = get_or_create_spreadsheet(client, SPREADSHEET_ID)
         sheets_to_sync = ['Transactions', 'Expenses', 'Savings', 'Budgets']
         
         imported_data = {}
@@ -122,17 +123,61 @@ def sync_from_google_sheets():
                 worksheet = spreadsheet.worksheet(sheet_name)
                 records = worksheet.get_all_records()
                 imported_data[sheet_name.lower()] = records
-            except:
-                pass
+            except Exception as e:
+                print(f"Warning: Could not read sheet {sheet_name}: {e}")
+                imported_data[sheet_name.lower()] = []
         
-        # Save to Excel (you would need to implement this)
         return {
             "status": "success",
             "message": "Data imported from Google Sheets",
-            "data": imported_data
+            "data": imported_data,
+            "spreadsheet_url": spreadsheet.url
         }
     except Exception as e:
         return {"status": "error", "message": f"Failed to import: {str(e)}"}
+
+def upload_file_to_google_sheets(file_data: Dict):
+    """Upload file metadata to Google Sheets Files sheet"""
+    client = get_google_client()
+    if not client:
+        return {"status": "error", "message": "Failed to authenticate with Google"}
+    
+    try:
+        spreadsheet = get_or_create_spreadsheet(client, SPREADSHEET_ID)
+        
+        # Get or create Files worksheet
+        try:
+            worksheet = spreadsheet.worksheet('Files')
+        except:
+            worksheet = spreadsheet.add_worksheet(title='Files', rows=1000, cols=10)
+            # Add headers if new sheet
+            headers = ['File ID', 'File Name', 'File Type', 'File Size (bytes)', 'Transaction ID', 'Transaction Type', 'Uploaded At', 'File Data (Base64)']
+            worksheet.append_row(headers)
+            worksheet.format('1:1', {
+                'backgroundColor': {'red': 0.26, 'green': 0.45, 'blue': 0.76},
+                'textFormat': {'bold': True, 'foregroundColor': {'red': 1, 'green': 1, 'blue': 1}}
+            })
+        
+        # Append file data
+        row = [
+            str(file_data.get('fileId', '')),
+            file_data.get('fileName', ''),
+            file_data.get('fileType', ''),
+            str(file_data.get('fileSize', 0)),
+            str(file_data.get('transactionId', '')),
+            file_data.get('transactionType', ''),
+            file_data.get('uploadedAt', ''),
+            file_data.get('fileData', '')[:100] + '...' if len(file_data.get('fileData', '')) > 100 else file_data.get('fileData', '')  # Truncate base64 for display
+        ]
+        worksheet.append_row(row)
+        
+        return {
+            "status": "success",
+            "message": "File metadata synced to Google Sheets",
+            "spreadsheet_url": spreadsheet.url
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to upload file to Google Sheets: {str(e)}"}
 
 
 

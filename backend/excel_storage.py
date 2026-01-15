@@ -222,5 +222,47 @@ def update_summary(wb):
     headers = ['Metric', 'Value', 'Last Updated']
     save_sheet_data(wb, 'Summary', summary_data, headers)
 
+def save_all_data(data: Dict):
+    """Save all data (transactions, expenses, savings, budgets) to Excel at once"""
+    wb = load_excel_file()
+    
+    # Create backup before updating
+    backup_excel_file()
+    
+    total_records = 0
+    
+    # Save transactions
+    if 'transactions' in data and data['transactions']:
+        transactions = data['transactions']
+        headers = ['ID', 'Date', 'Time', 'Type', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']
+        save_sheet_data(wb, 'Transactions', transactions, headers)
+        total_records += len(transactions)
+    
+    # Save expenses
+    if 'expenses' in data and data['expenses']:
+        expenses = data['expenses']
+        headers = ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']
+        save_sheet_data(wb, 'Expenses', expenses, headers)
+        total_records += len(expenses)
+    
+    # Save savings
+    if 'savings' in data and data['savings']:
+        savings = data['savings']
+        headers = ['ID', 'Date', 'Time', 'Account Type', 'Amount', 'Maturity Date', 'Interest Rate', 'Description', 'Created At']
+        save_sheet_data(wb, 'Savings', savings, headers)
+        total_records += len(savings)
+    
+    # Save budgets
+    if 'budgets' in data and data['budgets']:
+        budgets = data['budgets']
+        headers = ['ID', 'Category', 'Monthly Limit', 'Description', 'Created At']
+        save_sheet_data(wb, 'Budgets', budgets, headers)
+        total_records += len(budgets)
+    
+    # Update summary
+    update_summary(wb)
+    
+    return {"total_records": total_records, "status": "success"}
+
 
 

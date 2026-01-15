@@ -29,6 +29,7 @@ function AppContent() {
   useEffect(() => {
     let syncInterval = null;
     let cleanupFn = null;
+    let googleSheetsCleanup = null;
     
     // Initialize Electron storage and restore data
     const initStorage = async () => {
@@ -62,6 +63,42 @@ function AppContent() {
       } else {
         // In browser: restore from backend
         await restoreFromBackend(db);
+      }
+
+      // Initialize Google Sheets sync (works on both web and mobile)
+      try {
+        const { autoSyncOnLoad, setupDailySync, syncOnDataChange } = await import('./utils/googleSheetsSync');
+        
+        // Auto-sync from Google Sheets on app load
+        await autoSyncOnLoad(db);
+        
+        // Set up daily sync
+        googleSheetsCleanup = setupDailySync(db);
+        
+        // Listen for data changes to sync to Google Sheets
+        const handleDataChange = () => {
+          syncOnDataChange();
+        };
+        window.addEventListener('dataChanged', handleDataChange);
+        
+        // Also sync on visibility change (when app becomes active)
+        const handleVisibilityChange = () => {
+          if (!document.hidden) {
+            autoSyncOnLoad(db); // Fetch latest data when app becomes visible
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        if (googleSheetsCleanup) {
+          const originalCleanup = googleSheetsCleanup;
+          googleSheetsCleanup = () => {
+            originalCleanup();
+            window.removeEventListener('dataChanged', handleDataChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+          };
+        }
+      } catch (error) {
+        console.warn('Google Sheets sync not available:', error);
       }
     };
     
@@ -147,6 +184,7 @@ function AppContent() {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('dataChanged', handleDataChange);
       if (cleanupFn) cleanupFn();
+      if (googleSheetsCleanup) googleSheetsCleanup();
     };
   }, []);
 
