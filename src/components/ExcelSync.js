@@ -94,7 +94,7 @@ const ExcelSync = ({ onDataFetched }) => {
       if (transactionCount === 0 && expenseCount === 0) {
         setStatus({ 
           type: 'info', 
-          message: '✅ Excel sheet is EMPTY. No data to fetch. Add data in the app and click "Update Excel" to save to Excel.' 
+          message: '✅ Google Sheet is EMPTY. No data to fetch. Add data in the app and click "Update Excel" to save to Google Sheets.' 
         });
       } else {
         let message = `✅ Data fetched! `;
@@ -286,7 +286,7 @@ const ExcelSync = ({ onDataFetched }) => {
         className="excel-sync-btn-header update-btn"
         onClick={updateExcel}
         disabled={syncing}
-        title="Update Excel sheet with current data (also syncs to Google Sheets)"
+        title="Update Google Sheets with current data (downloads Excel file for manual upload)"
       >
         <Upload size={18} />
         {syncing ? 'Updating...' : 'Update Excel'}

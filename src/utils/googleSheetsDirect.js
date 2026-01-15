@@ -148,7 +148,11 @@ export const writeToGoogleSheets = async (transactions, expenses) => {
  * Export to Excel file (download) - Simple fallback
  */
 const exportToExcelFile = (transactions, expenses) => {
+  // Dynamic import for XLSX to avoid build issues
   const XLSX = require('xlsx');
+  if (!XLSX) {
+    throw new Error('XLSX library not available');
+  }
   const wb = XLSX.utils.book_new();
   
   const incomeData = transactions
