@@ -179,17 +179,30 @@ const ExcelSync = ({ onDataFetched }) => {
       
       const incomeCount = transactions.filter(t => t.type === 'income').length;
       const expenseCount = expenses.length;
-      setStatus({ 
-        type: 'success', 
-        message: `Excel updated successfully! ${recordCount} records saved (${incomeCount} income, ${expenseCount} expenses)` 
-      });
+      const totalRecords = incomeCount + expenseCount;
+      
+      // Check if it's Excel export or direct write
+      if (result.message && result.message.includes('downloaded')) {
+        setStatus({ 
+          type: 'success', 
+          message: `✅ ${result.message} Upload this file to your Google Sheet manually.` 
+        });
+      } else {
+        setStatus({ 
+          type: 'success', 
+          message: `✅ Data saved to Google Sheets! ${totalRecords} records (${incomeCount} income, ${expenseCount} expenses)` 
+        });
+      }
       window.dispatchEvent(new Event('dataChanged'));
       
       // Auto-hide success message after 3 seconds
       setTimeout(() => setStatus(null), 3000);
     } catch (error) {
-      console.error('Error updating Excel:', error);
-      setStatus({ type: 'error', message: 'Failed to update Excel. Make sure backend is running.' });
+      console.error('Error updating Google Sheets:', error);
+      setStatus({ 
+        type: 'error', 
+        message: error.message || 'Failed to update Google Sheets. Excel file will be downloaded instead - you can upload it manually.' 
+      });
     } finally {
       setSyncing(false);
     }
