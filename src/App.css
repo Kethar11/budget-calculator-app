@@ -454,14 +454,20 @@
     grid-template-columns: 1fr;
     gap: 15px;
     padding: 0 10px;
+    max-width: 100%;
   }
   
   .left-panel {
     order: 1;
+    width: 100%;
+    max-width: 100%;
   }
   
   .right-panel {
     order: 2;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .App-header {
@@ -469,6 +475,20 @@
     margin-left: -10px;
     margin-right: -10px;
     margin-top: -10px;
+    width: calc(100% + 20px);
+  }
+  
+  /* Fix text overflow */
+  * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  .header-title h1,
+  .stat-label,
+  .stat-value {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .header-stats {
@@ -540,6 +560,34 @@
   .main-container {
     padding: 0 4px;
     gap: 12px;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .left-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .right-panel {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Prevent text overflow */
+  * {
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+  }
+  
+  /* Fix header width to match container */
+  .App-header {
+    width: calc(100% + 16px) !important;
+    margin-left: -8px !important;
+    margin-right: -8px !important;
   }
   
   /* Improve touch targets for Samsung S24 and similar phones */

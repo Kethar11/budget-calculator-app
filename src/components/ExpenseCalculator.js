@@ -245,20 +245,31 @@ const ExpenseCalculator = () => {
 
   const deleteExpense = async (id) => {
     try {
-      // Delete associated files first
-      await deleteFilesForTransaction(id, 'expense');
-      // Delete from database
-      await db.expenses.delete(id);
-      
-      // Delete from Google Sheets
-      try {
-        await deleteRecordFromGoogleSheets(id, 'expense');
-        console.log('✅ Record deleted from Google Sheets');
-      } catch (error) {
-        console.warn('Failed to delete from Google Sheets:', error);
+      // Get expense before deleting
+      const expense = await db.expenses.get(id);
+      if (!expense) {
+        throw new Error('Expense not found');
       }
       
-      await loadExpenses();
+      // Delete from Google Sheets FIRST (primary database)
+      try {
+        const result = await deleteRecordFromGoogleSheets(id, 'expense');
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to delete from Google Sheets');
+        }
+        console.log('✅ Record deleted from Google Sheets');
+        
+        // Delete associated files
+        await deleteFilesForTransaction(id, 'expense');
+        
+        // After successful delete, fetch from Google Sheets to get latest data
+        await loadExpenses();
+      } catch (error) {
+        console.error('Failed to delete from Google Sheets:', error);
+        alert('Failed to delete from Google Sheets. Please check your connection and try again.');
+        return;
+      }
+      
       window.dispatchEvent(new Event('dataChanged'));
     } catch (error) {
       console.error('Error deleting expense:', error);

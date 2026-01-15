@@ -77,30 +77,36 @@ const BudgetCalculator = () => {
 
   const addTransaction = async (transaction) => {
     try {
-      const transactionId = await db.transactions.add({
+      // Generate temporary ID for the record
+      const tempId = Date.now();
+      const recordToAdd = {
+        id: tempId,
         ...transaction,
         date: transaction.date || new Date().toISOString(),
         createdAt: new Date().toISOString(),
         files: [],
         entryCurrency: transaction.entryCurrency || 'EUR'
-      });
-      await loadTransactions();
+      };
       
-      // Auto-sync to Google Sheets (direct update)
+      // Write to Google Sheets FIRST (primary database)
       try {
-        const savedTransaction = await db.transactions.get(transactionId);
-        if (savedTransaction) {
-          await addRecordToGoogleSheets(savedTransaction, savedTransaction.type === 'income' ? 'income' : 'expense');
-          console.log('✅ Record added to Google Sheets');
+        const result = await addRecordToGoogleSheets(recordToAdd, recordToAdd.type === 'income' ? 'income' : 'expense');
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to add to Google Sheets');
         }
+        console.log('✅ Record added to Google Sheets');
+        
+        // After successful write, fetch from Google Sheets to get latest data
+        await loadTransactions();
       } catch (error) {
-        console.warn('Auto-sync to Google Sheets failed:', error);
+        console.error('Failed to add to Google Sheets:', error);
+        alert('Failed to save to Google Sheets. Please check your connection and try again.');
+        throw error;
       }
       
       // Trigger data change event
       window.dispatchEvent(new Event('dataChanged'));
-      // Removed Electron storage
-      return transactionId;
+      return tempId;
     } catch (error) {
       console.error('Error adding transaction:', error);
       throw error;
@@ -142,33 +148,37 @@ const BudgetCalculator = () => {
   };
 
   const updateTransaction = async (transaction) => {
-    // Update in Google Sheets
     try {
-      const transactionType = transaction.type === 'income' ? 'income' : 'expense';
-      await updateRecordInGoogleSheets(transaction, transactionType);
-      console.log('✅ Record updated in Google Sheets');
-    } catch (error) {
-      console.warn('Failed to update in Google Sheets:', error);
-    }
-    try {
-      await db.transactions.update(editingId, {
-        ...transaction,
-        date: transaction.date || new Date().toISOString(),
-        entryCurrency: transaction.entryCurrency || 'EUR'
-      });
-      setEditingId(null);
-      await loadTransactions();
+      // Get the existing transaction to preserve ID
+      const existingTransaction = await db.transactions.get(editingId);
+      if (!existingTransaction) {
+        throw new Error('Transaction not found');
+      }
       
-      // Update in Google Sheets
+      const updatedRecord = {
+        id: existingTransaction.id,
+        ...transaction,
+        date: transaction.date || existingTransaction.date || new Date().toISOString(),
+        createdAt: existingTransaction.createdAt || new Date().toISOString(),
+        entryCurrency: transaction.entryCurrency || existingTransaction.entryCurrency || 'EUR'
+      };
+      
+      // Update in Google Sheets FIRST (primary database)
       try {
-        const updatedTransaction = await db.transactions.get(editingId);
-        if (updatedTransaction) {
-          const transactionType = updatedTransaction.type === 'income' ? 'income' : 'expense';
-          await updateRecordInGoogleSheets(updatedTransaction, transactionType);
-          console.log('✅ Record updated in Google Sheets');
+        const transactionType = updatedRecord.type === 'income' ? 'income' : 'expense';
+        const result = await updateRecordInGoogleSheets(updatedRecord, transactionType);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update in Google Sheets');
         }
+        console.log('✅ Record updated in Google Sheets');
+        
+        // After successful update, fetch from Google Sheets to get latest data
+        setEditingId(null);
+        await loadTransactions();
       } catch (error) {
-        console.warn('Failed to update in Google Sheets:', error);
+        console.error('Failed to update in Google Sheets:', error);
+        alert('Failed to update in Google Sheets. Please check your connection and try again.');
+        throw error;
       }
       
       window.dispatchEvent(new Event('dataChanged'));

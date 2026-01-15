@@ -83,6 +83,9 @@
     position: relative;
     top: 0;
     margin-bottom: 20px;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 12px;
   }
   
   .nav-items {
@@ -109,6 +112,10 @@
   .sidebar-navigation {
     margin-bottom: 16px;
     padding: 12px 0;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 12px;
   }
   
   .nav-header {
@@ -117,6 +124,8 @@
   
   .nav-header h3 {
     font-size: 0.95rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   
   .nav-items {
@@ -125,14 +134,25 @@
   }
   
   .nav-item {
-    padding: 14px 18px;
-    font-size: 0.9rem;
+    padding: 14px 16px;
+    font-size: 0.85rem;
     min-height: 48px; /* Larger for easier tapping */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
   
   .nav-item svg {
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
+  }
+  
+  .nav-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
