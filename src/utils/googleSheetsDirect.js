@@ -127,19 +127,164 @@ export const readFromGoogleSheets = async () => {
 };
 
 /**
- * Write to Google Sheets - Simple approach: Export to Excel for manual upload
- * For automatic write, you can set up Google Apps Script (optional)
+ * Google Apps Script Web App URL
+ * Set this in your environment or create the script (see instructions below)
+ */
+const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GOOGLE_SCRIPT_URL || '';
+
+/**
+ * Add a single record to Google Sheets
+ */
+export const addRecordToGoogleSheets = async (record, type) => {
+  if (!GOOGLE_SCRIPT_URL) {
+    console.warn('Google Script URL not configured. Please set up Google Apps Script.');
+    return { success: false, message: 'Google Script not configured' };
+  }
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'add',
+        sheetId: GOOGLE_SHEET_ID,
+        type: type, // 'income' or 'expense'
+        data: {
+          ID: record.id,
+          Date: record.date ? new Date(record.date).toISOString().split('T')[0] : '',
+          Category: record.category || '',
+          Subcategory: record.subcategory || '',
+          Amount: record.amount || 0,
+          Description: record.description || '',
+          'Created At': record.createdAt || new Date().toISOString()
+        }
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to add record');
+    const result = await response.json();
+    return { success: true, message: result.message || 'Record added to Google Sheets' };
+  } catch (error) {
+    console.error('Error adding record to Google Sheets:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Update a single record in Google Sheets
+ */
+export const updateRecordInGoogleSheets = async (record, type) => {
+  if (!GOOGLE_SCRIPT_URL) {
+    console.warn('Google Script URL not configured.');
+    return { success: false, message: 'Google Script not configured' };
+  }
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'update',
+        sheetId: GOOGLE_SHEET_ID,
+        type: type, // 'income' or 'expense'
+        recordId: record.id,
+        data: {
+          ID: record.id,
+          Date: record.date ? new Date(record.date).toISOString().split('T')[0] : '',
+          Category: record.category || '',
+          Subcategory: record.subcategory || '',
+          Amount: record.amount || 0,
+          Description: record.description || '',
+          'Created At': record.createdAt || new Date().toISOString()
+        }
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to update record');
+    const result = await response.json();
+    return { success: true, message: result.message || 'Record updated in Google Sheets' };
+  } catch (error) {
+    console.error('Error updating record in Google Sheets:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Delete a single record from Google Sheets
+ */
+export const deleteRecordFromGoogleSheets = async (recordId, type) => {
+  if (!GOOGLE_SCRIPT_URL) {
+    console.warn('Google Script URL not configured.');
+    return { success: false, message: 'Google Script not configured' };
+  }
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'delete',
+        sheetId: GOOGLE_SHEET_ID,
+        type: type, // 'income' or 'expense'
+        recordId: recordId
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to delete record');
+    const result = await response.json();
+    return { success: true, message: result.message || 'Record deleted from Google Sheets' };
+  } catch (error) {
+    console.error('Error deleting record from Google Sheets:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Write all data to Google Sheets (for bulk operations)
+ * Falls back to Excel export if Google Script not configured
  */
 export const writeToGoogleSheets = async (transactions, expenses) => {
-  try {
-    // For now, export to Excel file - user can upload to Google Sheets
-    // This is the simplest approach that works immediately
+  if (!GOOGLE_SCRIPT_URL) {
+    // Fallback to Excel export
     return exportToExcelFile(transactions, expenses);
-    
-    // TODO: Optional - Set up Google Apps Script for automatic write
-    // See GOOGLE_SHEETS_SETUP.md for instructions
+  }
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'syncAll',
+        sheetId: GOOGLE_SHEET_ID,
+        transactions: transactions
+          .filter(t => t.type === 'income')
+          .map(t => ({
+            ID: t.id,
+            Date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
+            Category: t.category || '',
+            Subcategory: t.subcategory || '',
+            Amount: t.amount || 0,
+            Description: t.description || '',
+            'Created At': t.createdAt || new Date().toISOString()
+          })),
+        expenses: expenses.map(e => ({
+          ID: e.id,
+          Date: e.date ? new Date(e.date).toISOString().split('T')[0] : '',
+          Category: e.category || '',
+          Subcategory: e.subcategory || '',
+          Amount: e.amount || 0,
+          Description: e.description || '',
+          'Created At': e.createdAt || new Date().toISOString()
+        }))
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to sync to Google Sheets');
+    const result = await response.json();
+    return { success: true, message: result.message || 'Data synced to Google Sheets!' };
   } catch (error) {
-    console.error('Error writing to Google Sheets:', error);
+    console.error('Error syncing to Google Sheets:', error);
+    // Fallback to Excel export
     return exportToExcelFile(transactions, expenses);
   }
 };

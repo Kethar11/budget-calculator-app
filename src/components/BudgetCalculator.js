@@ -7,7 +7,7 @@ import TableView from './TableView';
 import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
-import { writeToGoogleSheets } from '../utils/googleSheetsDirect';
+import { addRecordToGoogleSheets, updateRecordInGoogleSheets, deleteRecordFromGoogleSheets } from '../utils/googleSheetsDirect';
 // Removed Electron storage
 import DateRangePicker from './DateRangePicker';
 import { useCurrency } from '../contexts/CurrencyContext';
@@ -86,14 +86,15 @@ const BudgetCalculator = () => {
       });
       await loadTransactions();
       
-      // Auto-sync to Google Sheets (downloads Excel file)
+      // Auto-sync to Google Sheets (direct update)
       try {
-        const allTransactions = await db.transactions.toArray();
-        const allExpenses = await db.expenses.toArray();
-        await writeToGoogleSheets(allTransactions, allExpenses);
-        console.log('✅ Auto-synced to Google Sheets (Excel file downloaded)');
-      } catch (excelError) {
-        console.warn('Auto-sync to Google Sheets failed:', excelError);
+        const savedTransaction = await db.transactions.get(transactionId);
+        if (savedTransaction) {
+          await addRecordToGoogleSheets(savedTransaction, savedTransaction.type === 'income' ? 'income' : 'expense');
+          console.log('✅ Record added to Google Sheets');
+        }
+      } catch (error) {
+        console.warn('Auto-sync to Google Sheets failed:', error);
       }
       
       // Trigger data change event
@@ -108,11 +109,25 @@ const BudgetCalculator = () => {
 
   const deleteTransaction = async (id) => {
     try {
+      // Get transaction before deleting to know its type
+      const transaction = await db.transactions.get(id);
+      const transactionType = transaction?.type === 'income' ? 'income' : 'expense';
+      
       // Delete associated files first
       await deleteFilesForTransaction(id, 'transaction');
       // Then delete the transaction
       await db.transactions.delete(id);
+      
+      // Delete from Google Sheets
+      try {
+        await deleteRecordFromGoogleSheets(id, transactionType);
+        console.log('✅ Record deleted from Google Sheets');
+      } catch (error) {
+        console.warn('Failed to delete from Google Sheets:', error);
+      }
+      
       await loadTransactions();
+      window.dispatchEvent(new Event('dataChanged'));
     } catch (error) {
       console.error('Error deleting transaction:', error);
     }
@@ -127,6 +142,14 @@ const BudgetCalculator = () => {
   };
 
   const updateTransaction = async (transaction) => {
+    // Update in Google Sheets
+    try {
+      const transactionType = transaction.type === 'income' ? 'income' : 'expense';
+      await updateRecordInGoogleSheets(transaction, transactionType);
+      console.log('✅ Record updated in Google Sheets');
+    } catch (error) {
+      console.warn('Failed to update in Google Sheets:', error);
+    }
     try {
       await db.transactions.update(editingId, {
         ...transaction,

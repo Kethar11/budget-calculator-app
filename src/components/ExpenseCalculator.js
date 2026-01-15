@@ -6,7 +6,7 @@ import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import { useCurrency } from '../contexts/CurrencyContext';
-import { writeToGoogleSheets } from '../utils/googleSheetsDirect';
+import { addRecordToGoogleSheets, updateRecordInGoogleSheets, deleteRecordFromGoogleSheets } from '../utils/googleSheetsDirect';
 // Removed Electron storage
 import AmountInput from './AmountInput';
 import RecordModal from './RecordModal';
