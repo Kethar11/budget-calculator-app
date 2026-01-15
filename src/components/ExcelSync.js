@@ -234,57 +234,27 @@ const ExcelSync = ({ onDataFetched }) => {
   // Clear Excel sheet (with password)
   const clearExcelSheet = async () => {
     // Ask for password
-    const password = window.prompt('⚠️ Enter password to clear Excel sheet:');
+    const password = window.prompt('⚠️ Enter password to clear Google Sheets:');
     if (password !== '780788') {
       setStatus({ 
         type: 'error', 
-        message: 'Incorrect password. Excel sheet not cleared.' 
+        message: 'Incorrect password. Google Sheets not cleared.' 
       });
       setTimeout(() => setStatus(null), 3000);
       return;
     }
 
-    if (!window.confirm('⚠️ WARNING: This will delete ALL data from Excel sheet! This cannot be undone. Are you absolutely sure?')) {
+    if (!window.confirm('⚠️ WARNING: To clear Google Sheets, please open the sheet and delete rows manually. This button cannot clear Google Sheets directly. Continue to open the sheet?')) {
       return;
     }
 
-    setSyncing(true);
-    setStatus(null);
-    
-    const backendRunning = await checkBackend();
-    if (!backendRunning) {
-      setStatus({ 
-        type: 'error', 
-        message: 'Excel sync requires a backend server. This feature is optional - all other features work without it!' 
-      });
-      setSyncing(false);
-      return;
-    }
-    
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/excel/clear-all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to clear Excel');
-      }
-
-      const result = await response.json();
-      setStatus({ 
-        type: 'success', 
-        message: result.message || 'Excel sheet cleared successfully!' 
-      });
-      window.dispatchEvent(new Event('dataChanged'));
-      
-      setTimeout(() => setStatus(null), 5000);
-    } catch (error) {
-      console.error('Error clearing Excel:', error);
-      setStatus({ type: 'error', message: 'Failed to clear Excel. Make sure backend is running.' });
-    } finally {
-      setSyncing(false);
-    }
+    // Open Google Sheets for manual clearing
+    window.open('https://docs.google.com/spreadsheets/d/1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0/edit', '_blank');
+    setStatus({ 
+      type: 'info', 
+      message: 'Google Sheets opened. Please delete rows manually to clear data.' 
+    });
+    setTimeout(() => setStatus(null), 5000);
   };
 
   return (
