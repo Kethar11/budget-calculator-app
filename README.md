@@ -38,3 +38,5 @@ npm run build
 ## 🚀 Deploy
 
 Push to `main` branch → Auto-deploys to GitHub Pages
+
+**Note:** Make sure GitHub Pages is enabled with "GitHub Actions" as source in repository settings.
