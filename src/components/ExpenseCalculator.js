@@ -154,6 +154,43 @@ const ExpenseCalculator = () => {
         time: new Date().toTimeString().slice(0, 5)
       });
       await loadExpenses();
+      
+      // Auto-sync to Excel - SIMPLIFIED
+      try {
+        const allTransactions = await db.transactions.toArray();
+        const allExpenses = await db.expenses.toArray();
+        
+        await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/api/excel/update-all`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactions: allTransactions.map(t => ({
+              ID: t.id,
+              Date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
+              Time: t.date ? new Date(t.date).toTimeString().slice(0, 8) : '',
+              Type: t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : '',
+              Category: t.category || '',
+              Subcategory: t.subcategory || '',
+              Amount: t.amount || 0,
+              Description: t.description || '',
+              'Created At': t.createdAt || new Date().toISOString()
+            })),
+            expenses: allExpenses.map(e => ({
+              ID: e.id,
+              Date: e.date ? new Date(e.date).toISOString().split('T')[0] : '',
+              Time: e.date ? new Date(e.date).toTimeString().slice(0, 8) : '',
+              Category: e.category || '',
+              Subcategory: e.subcategory || '',
+              Amount: e.amount || 0,
+              Description: e.description || '',
+              'Created At': e.createdAt || new Date().toISOString()
+            }))
+          })
+        });
+      } catch (excelError) {
+        console.warn('Excel sync failed:', excelError);
+      }
+      
       // Trigger header stats update
       window.dispatchEvent(new Event('dataChanged'));
     } catch (error) {
