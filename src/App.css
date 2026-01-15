@@ -532,16 +532,24 @@
 }
 
 @media (max-width: 480px) {
+  .App {
+    padding: 8px;
+    padding-bottom: 20px;
+  }
+  
   .main-container {
-    padding: 0 8px;
+    padding: 0 4px;
     gap: 12px;
   }
   
   /* Improve touch targets for Samsung S24 and similar phones */
-  button, a.button, .excel-sync-btn-header, .google-sheet-link {
-    min-height: 48px;
+  button, a.button, .excel-sync-btn-header, .google-sheet-link, .logout-button {
+    min-height: 48px !important;
+    min-width: 48px !important;
+    padding: 12px 16px !important;
     touch-action: manipulation;
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    font-size: 0.9rem !important;
   }
   
   /* Better spacing for small screens */
@@ -552,6 +560,26 @@
   .marquee-content {
     font-size: 0.75rem;
     gap: 15px;
+  }
+  
+  .App-header {
+    padding: 12px 8px !important;
+    margin-left: -8px !important;
+    margin-right: -8px !important;
+    margin-top: -8px !important;
+  }
+  
+  .header-top {
+    gap: 8px !important;
+  }
+  
+  .header-stats {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  
+  .stat-card {
+    padding: 12px !important;
   }
 }
 

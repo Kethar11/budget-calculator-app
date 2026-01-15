@@ -311,4 +311,49 @@
   .summary-stats {
     grid-template-columns: 1fr;
   }
+  
+  .expense-form-card,
+  .expense-summary-card {
+    padding: 16px !important;
+  }
+  
+  .expense-form-card h2,
+  .expense-summary-card h2 {
+    font-size: 1rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .expense-grid {
+    gap: 12px !important;
+  }
+  
+  .expense-form-card,
+  .expense-summary-card {
+    padding: 14px !important;
+  }
+  
+  .expense-form-card h2,
+  .expense-summary-card h2 {
+    font-size: 0.95rem !important;
+    margin-bottom: 12px;
+  }
+  
+  /* Form inputs */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    min-height: 48px !important;
+    padding: 12px 14px !important;
+  }
+  
+  /* Buttons */
+  button {
+    min-height: 48px !important;
+    padding: 12px 16px !important;
+    font-size: 0.9rem !important;
+  }
+  
+  .summary-stats {
+    gap: 10px;
+  }
 }

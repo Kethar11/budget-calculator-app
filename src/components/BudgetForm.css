@@ -112,3 +112,47 @@
   transform: translateY(0);
 }
 
+@media (max-width: 480px) {
+  .budget-form-card {
+    padding: 16px !important;
+  }
+  
+  .budget-form-card h2 {
+    font-size: 1.1rem !important;
+    margin-bottom: 16px;
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+  }
+  
+  .form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  
+  .form-group select,
+  .form-group input[type="text"],
+  .form-group input[type="number"] {
+    padding: 12px 14px !important;
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    min-height: 48px;
+  }
+  
+  .submit-btn {
+    padding: 14px 16px !important;
+    font-size: 1rem !important;
+    min-height: 48px;
+  }
+  
+  .radio-group {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .radio-label {
+    padding: 10px;
+    min-height: 44px;
+  }
+}
+
