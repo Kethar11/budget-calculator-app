@@ -2,6 +2,7 @@
   "name": "budget-calculator-app",
   "version": "1.0.0",
   "description": "Complete Budget, Savings & Expense Calculator with Charts",
+  "homepage": "https://Kethar11.github.io/budget-calculator-app",
   "private": true,
   "scripts": {
     "start": "react-scripts start",
