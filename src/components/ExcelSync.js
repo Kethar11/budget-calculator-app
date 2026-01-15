@@ -22,7 +22,7 @@ const ExcelSync = () => {
       
       const data = await response.json();
       
-      // Import transactions
+      // Import transactions (from Income and Expense sheets)
       if (data.transactions && Array.isArray(data.transactions)) {
         for (const t of data.transactions) {
           try {
@@ -46,7 +46,7 @@ const ExcelSync = () => {
         }
       }
 
-      // Import expenses
+      // Import expenses (from Expense sheet)
       if (data.expenses && Array.isArray(data.expenses)) {
         for (const e of data.expenses) {
           try {
@@ -65,30 +65,6 @@ const ExcelSync = () => {
             }
           } catch (error) {
             console.error('Error importing expense:', error);
-          }
-        }
-      }
-
-      // Import savings
-      if (data.savings && Array.isArray(data.savings)) {
-        for (const s of data.savings) {
-          try {
-            const existing = await db.savings.get(s.ID);
-            if (!existing) {
-              await db.savings.add({
-                id: s.ID,
-                accountType: s['Account Type'] || s.accountType || '',
-                amount: parseFloat(s.Amount) || 0,
-                date: s.Date || s['Deposit Date'] || new Date().toISOString(),
-                maturityDate: s['Maturity Date'] || s.maturityDate || '',
-                interestRate: parseFloat(s['Interest Rate'] || s.interestRate || 0),
-                description: s.Description || '',
-                createdAt: s['Created At'] || new Date().toISOString(),
-                files: []
-              });
-            }
-          } catch (error) {
-            console.error('Error importing saving:', error);
           }
         }
       }
@@ -112,13 +88,11 @@ const ExcelSync = () => {
     setStatus(null);
     
     try {
-      // Get all data from IndexedDB
+      // Get all data from IndexedDB - SIMPLIFIED: Only Income and Expense
       const transactions = await db.transactions.toArray();
       const expenses = await db.expenses.toArray();
-      const savings = await db.savings.toArray();
-      const budgets = await db.budgets.toArray();
 
-      // Send to backend to update Excel
+      // Send to backend to update Excel - SIMPLIFIED structure
       const response = await fetch(`${BACKEND_URL}/api/excel/update-all`, {
         method: 'POST',
         headers: {
@@ -145,24 +119,6 @@ const ExcelSync = () => {
             Amount: e.amount || 0,
             Description: e.description || '',
             'Created At': e.createdAt || new Date().toISOString()
-          })),
-          savings: savings.map(s => ({
-            ID: s.id,
-            Date: s.date ? new Date(s.date).toISOString().split('T')[0] : '',
-            Time: s.date ? new Date(s.date).toTimeString().slice(0, 8) : '',
-            'Account Type': s.accountType || '',
-            Amount: s.amount || 0,
-            'Maturity Date': s.maturityDate ? new Date(s.maturityDate).toISOString().split('T')[0] : '',
-            'Interest Rate': s.interestRate || 0,
-            Description: s.description || '',
-            'Created At': s.createdAt || new Date().toISOString()
-          })),
-          budgets: budgets.map(b => ({
-            ID: b.id,
-            Category: b.category || '',
-            'Monthly Limit': b.monthlyLimit || 0,
-            Description: b.description || '',
-            'Created At': b.createdAt || new Date().toISOString()
           }))
         }),
       });

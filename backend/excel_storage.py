@@ -19,19 +19,17 @@ def ensure_backup_dir():
         os.makedirs(BACKUP_DIR)
 
 def create_excel_file():
-    """Create a new Excel file with proper structure - organized by month"""
+    """Create a new Excel file - SIMPLIFIED: Only Income and Expense"""
     wb = Workbook()
     
     # Remove default sheet
     if 'Sheet' in wb.sheetnames:
         wb.remove(wb['Sheet'])
     
-    # Create main summary sheets
+    # SIMPLIFIED: Only Income and Expense sheets
     sheets = {
-        'All Transactions': ['ID', 'Date', 'Time', 'Type', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At'],
-        'All Expenses': ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At'],
-        'All Savings': ['ID', 'Date', 'Time', 'Account Type', 'Amount', 'Maturity Date', 'Interest Rate', 'Description', 'Created At'],
-        'Budgets': ['ID', 'Category', 'Monthly Limit', 'Description', 'Created At'],
+        'Income': ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At', 'Updated At'],
+        'Expense': ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At', 'Updated At'],
         'Summary': ['Metric', 'Value', 'Last Updated']
     }
     
@@ -152,52 +150,91 @@ def backup_excel_file():
     return None
 
 def load_all_data():
-    """Load all data from Excel file - combines main sheets and monthly sheets"""
+    """Load all data from Excel - SIMPLIFIED: Only Income and Expense"""
     wb = load_excel_file()
     
-    # Load from main sheets (preferred)
-    transactions = get_sheet_data(wb, 'All Transactions')
-    expenses = get_sheet_data(wb, 'All Expenses')
-    savings = get_sheet_data(wb, 'All Savings')
+    # Load Income and Expense sheets
+    income_data = get_sheet_data(wb, 'Income')
+    expense_data = get_sheet_data(wb, 'Expense')
     
-    # If main sheets don't exist, try old sheet names for backward compatibility
-    if not transactions:
-        transactions = get_sheet_data(wb, 'Transactions')
-    if not expenses:
-        expenses = get_sheet_data(wb, 'Expenses')
-    if not savings:
-        savings = get_sheet_data(wb, 'Savings')
+    # Convert to transactions format for app compatibility
+    transactions = []
     
-    # Also load from monthly sheets and merge (avoid duplicates by ID)
+    # Convert Income to transactions
+    for income in income_data:
+        transactions.append({
+            'ID': income.get('ID'),
+            'Date': income.get('Date'),
+            'Time': income.get('Time'),
+            'Type': 'Income',
+            'Category': income.get('Category'),
+            'Subcategory': income.get('Subcategory'),
+            'Amount': income.get('Amount'),
+            'Description': income.get('Description'),
+            'Created At': income.get('Created At')
+        })
+    
+    # Convert Expense to transactions
+    for expense in expense_data:
+        transactions.append({
+            'ID': expense.get('ID'),
+            'Date': expense.get('Date'),
+            'Time': expense.get('Time'),
+            'Type': 'Expense',
+            'Category': expense.get('Category'),
+            'Subcategory': expense.get('Subcategory'),
+            'Amount': expense.get('Amount'),
+            'Description': expense.get('Description'),
+            'Created At': expense.get('Created At')
+        })
+    
+    # Also load from monthly sheets
     from datetime import datetime
     current_year = datetime.now().year
     months = ['January', 'February', 'March', 'April', 'May', 'June', 
               'July', 'August', 'September', 'October', 'November', 'December']
     
     transaction_ids = {t.get('ID') for t in transactions if t.get('ID')}
-    expense_ids = {e.get('ID') for e in expenses if e.get('ID')}
     
     for year in [current_year - 1, current_year, current_year + 1]:
         for month in months:
             sheet_name = f"{month} {year}"
             if sheet_name in wb.sheetnames:
-                month_transactions = get_sheet_data(wb, sheet_name)
-                for t in month_transactions:
-                    if t.get('ID') and t.get('ID') not in transaction_ids:
-                        transactions.append(t)
-                        transaction_ids.add(t.get('ID'))
-                
-                month_expenses = get_sheet_data(wb, sheet_name)
-                for e in month_expenses:
-                    if e.get('ID') and e.get('ID') not in expense_ids:
-                        expenses.append(e)
-                        expense_ids.add(e.get('ID'))
+                month_data = get_sheet_data(wb, sheet_name)
+                for item in month_data:
+                    if item.get('ID') and item.get('ID') not in transaction_ids:
+                        transactions.append({
+                            'ID': item.get('ID'),
+                            'Date': item.get('Date'),
+                            'Time': item.get('Time'),
+                            'Type': item.get('Type', 'Expense'),
+                            'Category': item.get('Category'),
+                            'Subcategory': item.get('Subcategory'),
+                            'Amount': item.get('Amount'),
+                            'Description': item.get('Description'),
+                            'Created At': item.get('Created At')
+                        })
+                        transaction_ids.add(item.get('ID'))
+    
+    # Convert to expenses format (for Expense Calculator)
+    expenses = []
+    for expense in expense_data:
+        expenses.append({
+            'ID': expense.get('ID'),
+            'Date': expense.get('Date'),
+            'Time': expense.get('Time'),
+            'Category': expense.get('Category'),
+            'Subcategory': expense.get('Subcategory'),
+            'Amount': expense.get('Amount'),
+            'Description': expense.get('Description'),
+            'Created At': expense.get('Created At')
+        })
     
     return {
         'transactions': transactions,
         'expenses': expenses,
-        'savings': savings,
-        'budgets': get_sheet_data(wb, 'Budgets'),
+        'savings': [],  # Removed - not needed
+        'budgets': [],  # Removed - not needed
         'summary': get_sheet_data(wb, 'Summary')
     }
 
@@ -248,37 +285,34 @@ def save_transaction(transaction: Dict):
     return transaction
 
 def update_summary(wb):
-    """Update summary sheet with current statistics"""
-    transactions = get_sheet_data(wb, 'All Transactions')
-    if not transactions:
-        transactions = get_sheet_data(wb, 'Transactions')  # Backward compatibility
+    """Update summary sheet - SIMPLIFIED: Only Income and Expense"""
+    income_data = get_sheet_data(wb, 'Income')
+    expense_data = get_sheet_data(wb, 'Expense')
     
-    expenses = get_sheet_data(wb, 'All Expenses')
-    if not expenses:
-        expenses = get_sheet_data(wb, 'Expenses')  # Backward compatibility
+    # If sheets don't exist, try old format
+    if not income_data:
+        all_transactions = get_sheet_data(wb, 'All Transactions') or get_sheet_data(wb, 'Transactions')
+        income_data = [t for t in all_transactions if (t.get('Type') or '').lower() == 'income']
     
-    savings = get_sheet_data(wb, 'All Savings')
-    if not savings:
-        savings = get_sheet_data(wb, 'Savings')  # Backward compatibility
+    if not expense_data:
+        all_transactions = get_sheet_data(wb, 'All Transactions') or get_sheet_data(wb, 'Transactions')
+        expense_data = [t for t in all_transactions if (t.get('Type') or '').lower() == 'expense']
+        # Also get from Expenses sheet
+        expenses_sheet = get_sheet_data(wb, 'All Expenses') or get_sheet_data(wb, 'Expenses')
+        if expenses_sheet:
+            expense_data.extend(expenses_sheet)
     
-    budgets = get_sheet_data(wb, 'Budgets')
-    
-    income = sum(float(t.get('Amount', 0) or 0) for t in transactions if t.get('Type', '').lower() == 'income')
-    expense_total = sum(float(t.get('Amount', 0) or 0) for t in transactions if t.get('Type', '').lower() == 'expense')
-    expense_records = sum(float(e.get('Amount', 0) or 0) for e in expenses)
-    savings_total = sum(float(s.get('Amount', 0) or 0) for s in savings)
-    balance = income - expense_total
+    income_total = sum(float(i.get('Amount', 0) or 0) for i in income_data)
+    expense_total = sum(float(e.get('Amount', 0) or 0) for e in expense_data)
+    balance = income_total - expense_total
     
     summary_data = [
-        {'Metric': 'Total Income', 'Value': f'€{income:.2f}', 'Last Updated': datetime.now().isoformat()},
-        {'Metric': 'Total Expenses (Transactions)', 'Value': f'€{expense_total:.2f}', 'Last Updated': datetime.now().isoformat()},
-        {'Metric': 'Total Expenses (Records)', 'Value': f'€{expense_records:.2f}', 'Last Updated': datetime.now().isoformat()},
-        {'Metric': 'Total Savings', 'Value': f'€{savings_total:.2f}', 'Last Updated': datetime.now().isoformat()},
+        {'Metric': 'Total Income', 'Value': f'€{income_total:.2f}', 'Last Updated': datetime.now().isoformat()},
+        {'Metric': 'Total Expenses', 'Value': f'€{expense_total:.2f}', 'Last Updated': datetime.now().isoformat()},
         {'Metric': 'Current Balance', 'Value': f'€{balance:.2f}', 'Last Updated': datetime.now().isoformat()},
-        {'Metric': 'Total Transactions', 'Value': len(transactions), 'Last Updated': datetime.now().isoformat()},
-        {'Metric': 'Total Expense Records', 'Value': len(expenses), 'Last Updated': datetime.now().isoformat()},
-        {'Metric': 'Total Savings Records', 'Value': len(savings), 'Last Updated': datetime.now().isoformat()},
-        {'Metric': 'Total Budgets Set', 'Value': len(budgets), 'Last Updated': datetime.now().isoformat()},
+        {'Metric': 'Total Income Records', 'Value': len(income_data), 'Last Updated': datetime.now().isoformat()},
+        {'Metric': 'Total Expense Records', 'Value': len(expense_data), 'Last Updated': datetime.now().isoformat()},
+        {'Metric': 'Last Updated', 'Value': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Last Updated': datetime.now().isoformat()},
     ]
     
     headers = ['Metric', 'Value', 'Last Updated']
@@ -301,9 +335,23 @@ def get_month_sheet_name(date_str):
         return f"{months[now.month - 1]} {now.year}"
 
 def save_to_monthly_sheet(wb, data, sheet_base_name, headers):
-    """Save data to both main sheet and monthly sheet"""
-    # Save to main "All Transactions" or "All Expenses" sheet
-    save_sheet_data(wb, f'All {sheet_base_name}', data, headers)
+    """Save data to both main sheet (Income/Expense) and monthly sheet"""
+    # Save to main Income or Expense sheet
+    if sheet_base_name == 'Transactions':
+        # Split into Income and Expense
+        income_data = [d for d in data if (d.get('Type') or '').lower() == 'income']
+        expense_data = [d for d in data if (d.get('Type') or '').lower() != 'income']
+        if income_data:
+            save_sheet_data(wb, 'Income', income_data, headers)
+        if expense_data:
+            save_sheet_data(wb, 'Expense', expense_data, headers)
+    elif sheet_base_name == 'Income':
+        save_sheet_data(wb, 'Income', data, headers)
+    elif sheet_base_name == 'Expense':
+        save_sheet_data(wb, 'Expense', data, headers)
+    else:
+        # Fallback to old naming
+        save_sheet_data(wb, f'All {sheet_base_name}', data, headers)
     
     # Also save to monthly sheets
     monthly_data = {}
@@ -353,7 +401,7 @@ def save_to_monthly_sheet(wb, data, sheet_base_name, headers):
     wb.save(EXCEL_FILE)
 
 def save_all_data(data: Dict):
-    """Save all data (transactions, expenses, savings, budgets) to Excel at once - organized by month"""
+    """Save all data to Excel - SIMPLIFIED: Only Income and Expense"""
     wb = load_excel_file()
     
     # Create backup before updating
@@ -361,33 +409,88 @@ def save_all_data(data: Dict):
     
     total_records = 0
     
-    # Save transactions (to main sheet and monthly sheets)
+    # Combine transactions and expenses into Income/Expense
+    income_records = []
+    expense_records = []
+    
+    # Process transactions
     if 'transactions' in data and data['transactions']:
-        transactions = data['transactions']
-        headers = ['ID', 'Date', 'Time', 'Type', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']
-        save_to_monthly_sheet(wb, transactions, 'Transactions', headers)
-        total_records += len(transactions)
+        for t in data['transactions']:
+            try:
+                date_str = t.get('Date') or t.get('date') or ''
+                if date_str:
+                    if 'T' in date_str:
+                        date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    else:
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    date_formatted = date_obj.strftime('%Y-%m-%d')
+                    time_formatted = date_obj.strftime('%H:%M:%S')
+                else:
+                    date_formatted = datetime.now().strftime('%Y-%m-%d')
+                    time_formatted = datetime.now().strftime('%H:%M:%S')
+                
+                record = {
+                    'ID': t.get('ID') or t.get('id'),
+                    'Date': date_formatted,
+                    'Time': time_formatted,
+                    'Category': t.get('Category') or t.get('category') or '',
+                    'Subcategory': t.get('Subcategory') or t.get('subcategory') or '',
+                    'Amount': float(t.get('Amount') or t.get('amount') or 0),
+                    'Description': t.get('Description') or t.get('description') or '',
+                    'Created At': t.get('Created At') or t.get('createdAt') or datetime.now().isoformat(),
+                    'Updated At': datetime.now().isoformat()
+                }
+                if (t.get('Type') or t.get('type') or '').lower() == 'income':
+                    income_records.append(record)
+                else:
+                    expense_records.append(record)
+            except Exception as e:
+                print(f"Error processing transaction: {e}")
+                continue
     
-    # Save expenses (to main sheet and monthly sheets)
+    # Process expenses (all go to Expense sheet)
     if 'expenses' in data and data['expenses']:
-        expenses = data['expenses']
-        headers = ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']
-        save_to_monthly_sheet(wb, expenses, 'Expenses', headers)
-        total_records += len(expenses)
+        for e in data['expenses']:
+            try:
+                date_str = e.get('Date') or e.get('date') or ''
+                if date_str:
+                    if 'T' in date_str:
+                        date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    else:
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    date_formatted = date_obj.strftime('%Y-%m-%d')
+                    time_formatted = date_obj.strftime('%H:%M:%S')
+                else:
+                    date_formatted = datetime.now().strftime('%Y-%m-%d')
+                    time_formatted = datetime.now().strftime('%H:%M:%S')
+                
+                record = {
+                    'ID': e.get('ID') or e.get('id'),
+                    'Date': date_formatted,
+                    'Time': time_formatted,
+                    'Category': e.get('Category') or e.get('category') or '',
+                    'Subcategory': e.get('Subcategory') or e.get('subcategory') or '',
+                    'Amount': float(e.get('Amount') or e.get('amount') or 0),
+                    'Description': e.get('Description') or e.get('description') or '',
+                    'Created At': e.get('Created At') or e.get('createdAt') or datetime.now().isoformat(),
+                    'Updated At': datetime.now().isoformat()
+                }
+                expense_records.append(record)
+            except Exception as err:
+                print(f"Error processing expense: {err}")
+                continue
     
-    # Save savings (to main sheet only - not monthly)
-    if 'savings' in data and data['savings']:
-        savings = data['savings']
-        headers = ['ID', 'Date', 'Time', 'Account Type', 'Amount', 'Maturity Date', 'Interest Rate', 'Description', 'Created At']
-        save_sheet_data(wb, 'All Savings', savings, headers)
-        total_records += len(savings)
+    # Save Income sheet
+    if income_records:
+        headers = ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At', 'Updated At']
+        save_to_monthly_sheet(wb, income_records, 'Income', headers)
+        total_records += len(income_records)
     
-    # Save budgets
-    if 'budgets' in data and data['budgets']:
-        budgets = data['budgets']
-        headers = ['ID', 'Category', 'Monthly Limit', 'Description', 'Created At']
-        save_sheet_data(wb, 'Budgets', budgets, headers)
-        total_records += len(budgets)
+    # Save Expense sheet
+    if expense_records:
+        headers = ['ID', 'Date', 'Time', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At', 'Updated At']
+        save_to_monthly_sheet(wb, expense_records, 'Expense', headers)
+        total_records += len(expense_records)
     
     # Update summary
     update_summary(wb)

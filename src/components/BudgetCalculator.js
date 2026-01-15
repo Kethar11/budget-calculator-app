@@ -77,12 +77,10 @@ const BudgetCalculator = () => {
       });
       await loadTransactions();
       
-      // Auto-sync to Excel
+      // Auto-sync to Excel - SIMPLIFIED: Only Income and Expense
       try {
         const allTransactions = await db.transactions.toArray();
         const allExpenses = await db.expenses.toArray();
-        const allSavings = await db.savings.toArray();
-        const allBudgets = await db.budgets.toArray();
         
         await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/api/excel/update-all`, {
           method: 'POST',
@@ -108,24 +106,6 @@ const BudgetCalculator = () => {
               Amount: e.amount || 0,
               Description: e.description || '',
               'Created At': e.createdAt || new Date().toISOString()
-            })),
-            savings: allSavings.map(s => ({
-              ID: s.id,
-              Date: s.date ? new Date(s.date).toISOString().split('T')[0] : '',
-              Time: s.date ? new Date(s.date).toTimeString().slice(0, 8) : '',
-              'Account Type': s.accountType || '',
-              Amount: s.amount || 0,
-              'Maturity Date': s.maturityDate ? new Date(s.maturityDate).toISOString().split('T')[0] : '',
-              'Interest Rate': s.interestRate || 0,
-              Description: s.description || '',
-              'Created At': s.createdAt || new Date().toISOString()
-            })),
-            budgets: allBudgets.map(b => ({
-              ID: b.id,
-              Category: b.category || '',
-              'Monthly Limit': b.monthlyLimit || 0,
-              Description: b.description || '',
-              'Created At': b.createdAt || new Date().toISOString()
             }))
           })
         });
