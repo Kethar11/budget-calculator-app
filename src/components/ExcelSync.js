@@ -1,58 +1,30 @@
 import React, { useState } from 'react';
 import { Download, Upload, CheckCircle, AlertCircle, X, Trash2, Database } from 'lucide-react';
 import { db } from '../utils/database';
+import { readFromGoogleSheets, writeToGoogleSheets } from '../utils/googleSheetsDirect';
 import './ExcelSync.css';
-
-// Excel sync is optional - requires backend server
-// For now, this feature is disabled in production
-const BACKEND_URL = 'http://localhost:8000';
 
 const ExcelSync = ({ onDataFetched }) => {
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState(null);
 
-  // Check if backend is running
-  const checkBackend = async () => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      const response = await fetch(`${BACKEND_URL}/`, { 
-        method: 'GET', 
-        signal: controller.signal 
-      });
-      clearTimeout(timeoutId);
-      return response.ok;
-    } catch (error) {
-      return false;
-    }
-  };
+  // No need to check backend - we use Google Sheets API directly!
 
-  // Fetch data from Excel (backend)
+  // Fetch data from Google Sheets (direct API - no backend!)
   const fetchFromExcel = async () => {
     setSyncing(true);
     setStatus(null);
     
-    // Check if backend is running first
-    const backendRunning = await checkBackend();
-    if (!backendRunning) {
-      setStatus({ 
-        type: 'error', 
-        message: 'Excel sync requires a backend server. This feature is optional - all other features work without it!' 
-      });
-      setSyncing(false);
-      return;
-    }
-    
     try {
-      const response = await fetch(`${BACKEND_URL}/api/excel/all-data`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch from Excel');
+      const data = await readFromGoogleSheets();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch from Google Sheets');
       }
       
-      const data = await response.json();
-      
-      // Import transactions (from Income and Expense sheets)
+      // Import transactions from Google Sheets
       if (data.transactions && Array.isArray(data.transactions)) {
+        let imported = 0;
         for (const t of data.transactions) {
           try {
             const existing = await db.transactions.get(t.ID);
@@ -68,15 +40,18 @@ const ExcelSync = ({ onDataFetched }) => {
                 createdAt: t['Created At'] || new Date().toISOString(),
                 files: []
               });
+              imported++;
             }
           } catch (error) {
             console.error('Error importing transaction:', error);
           }
         }
+        console.log(`✅ Imported ${imported} transactions from Google Sheets`);
       }
 
-      // Import expenses (from Expense sheet)
+      // Import expenses from Google Sheets
       if (data.expenses && Array.isArray(data.expenses)) {
+        let imported = 0;
         for (const e of data.expenses) {
           try {
             const existing = await db.expenses.get(e.ID);
@@ -91,11 +66,13 @@ const ExcelSync = ({ onDataFetched }) => {
                 createdAt: e['Created At'] || new Date().toISOString(),
                 files: []
               });
+              imported++;
             }
           } catch (error) {
             console.error('Error importing expense:', error);
           }
         }
+        console.log(`✅ Imported ${imported} expenses from Google Sheets`);
       }
 
       const transactionCount = data.transactions?.length || 0;
@@ -164,97 +141,44 @@ const ExcelSync = ({ onDataFetched }) => {
       // Auto-hide success message after 5 seconds
       setTimeout(() => setStatus(null), 5000);
     } catch (error) {
-      console.error('Error fetching from Excel:', error);
-      setStatus({ type: 'error', message: 'Failed to fetch from Excel. Make sure backend is running.' });
+      console.error('Error fetching from Google Sheets:', error);
+      setStatus({ 
+        type: 'error', 
+        message: `Failed to fetch from Google Sheets: ${error.message}. Make sure your Google Sheet is public or check the sheet ID.` 
+      });
     } finally {
       setSyncing(false);
     }
   };
 
-  // Update Excel with current data
+  // Update Google Sheets with current data (direct API - no backend!)
   const updateExcel = async () => {
     setSyncing(true);
     setStatus(null);
     
-    // Check if backend is running first
-    const backendRunning = await checkBackend();
-    if (!backendRunning) {
-      setStatus({ 
-        type: 'error', 
-        message: 'Excel sync requires a backend server. This feature is optional - all other features work without it!' 
-      });
-      setSyncing(false);
-      return;
-    }
-    
     try {
-      // Get all data from IndexedDB - SIMPLIFIED: Only Income and Expense
+      // Get all data from IndexedDB
       const transactions = await db.transactions.toArray();
       const expenses = await db.expenses.toArray();
-      
-      console.log(`📤 Sending to Excel: ${transactions.length} transactions, ${expenses.length} expenses`);
-      console.log('Sample transaction:', transactions[0]);
-      console.log('Sample expense:', expenses[0]);
       
       if (transactions.length === 0 && expenses.length === 0) {
         setStatus({ 
           type: 'error', 
-          message: 'No data to save! Please add some income or expense transactions first in the Budget or Expenses tabs.' 
+          message: 'No data to save! Please add some income or expense transactions first.' 
         });
         setSyncing(false);
         return;
       }
       
-      // Prepare data for sending
-      const transactionsData = transactions.map(t => ({
-        ID: t.id,
-        Date: t.date ? new Date(t.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        Time: t.date ? new Date(t.date).toTimeString().slice(0, 8) : new Date().toTimeString().slice(0, 8),
-        Type: t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : 'Expense',
-        Category: t.category || '',
-        Subcategory: t.subcategory || '',
-        Amount: t.amount || 0,
-        Description: t.description || '',
-        'Created At': t.createdAt || new Date().toISOString()
-      }));
+      // Write to Google Sheets directly (no backend!)
+      const result = await writeToGoogleSheets(transactions, expenses);
       
-      const expensesData = expenses.map(e => ({
-        ID: e.id,
-        Date: e.date ? new Date(e.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        Time: e.date ? new Date(e.date).toTimeString().slice(0, 8) : new Date().toTimeString().slice(0, 8),
-        Category: e.category || '',
-        Subcategory: e.subcategory || '',
-        Amount: e.amount || 0,
-        Description: e.description || '',
-        'Created At': e.createdAt || new Date().toISOString()
-      }));
-      
-      console.log('📋 Prepared transactions:', transactionsData.length);
-      console.log('📋 Prepared expenses:', expensesData.length);
-
-      // Send to backend to update Excel - SIMPLIFIED structure
-      const response = await fetch(`${BACKEND_URL}/api/excel/update-all`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          transactions: transactionsData,
-          expenses: expensesData
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 0 || response.status === 404) {
-          throw new Error('Backend server not found. Excel sync requires a backend server running on localhost:8000. This feature is optional - all other features work without it!');
-        }
-        throw new Error('Failed to update Excel');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update Google Sheets');
       }
-
-      const result = await response.json();
-      const recordCount = result.total_records || 0;
-      const incomeCount = result.income_count || 0;
-      const expenseCount = result.expense_count || 0;
+      
+      const incomeCount = transactions.filter(t => t.type === 'income').length;
+      const expenseCount = expenses.length;
       setStatus({ 
         type: 'success', 
         message: `Excel updated successfully! ${recordCount} records saved (${incomeCount} income, ${expenseCount} expenses)` 
