@@ -346,12 +346,18 @@ const ExpenseCalculator = () => {
       });
       await loadExpenses();
       // Trigger header stats update
-      window.dispatchEvent(new Event('dataChanged'));
-      // Auto-sync to backend
-      const updatedExpense = await db.expenses.get(editingId);
-      if (updatedExpense) {
-        autoSync(db, 'expense', updatedExpense);
+      // Update in Google Sheets
+      try {
+        const updatedExpense = await db.expenses.get(editingId);
+        if (updatedExpense) {
+          await updateRecordInGoogleSheets(updatedExpense, 'expense');
+          console.log('✅ Record updated in Google Sheets');
+        }
+      } catch (error) {
+        console.warn('Failed to update in Google Sheets:', error);
       }
+      
+      window.dispatchEvent(new Event('dataChanged'));
     } catch (error) {
       console.error('Error updating expense:', error);
       alert('Error updating expense');

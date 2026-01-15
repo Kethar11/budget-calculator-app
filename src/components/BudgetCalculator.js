@@ -158,11 +158,20 @@ const BudgetCalculator = () => {
       });
       setEditingId(null);
       await loadTransactions();
-      // Auto-sync to backend
-      const updatedTransaction = await db.transactions.get(editingId);
-      if (updatedTransaction) {
-        autoSync(db, 'transaction', updatedTransaction);
+      
+      // Update in Google Sheets
+      try {
+        const updatedTransaction = await db.transactions.get(editingId);
+        if (updatedTransaction) {
+          const transactionType = updatedTransaction.type === 'income' ? 'income' : 'expense';
+          await updateRecordInGoogleSheets(updatedTransaction, transactionType);
+          console.log('✅ Record updated in Google Sheets');
+        }
+      } catch (error) {
+        console.warn('Failed to update in Google Sheets:', error);
       }
+      
+      window.dispatchEvent(new Event('dataChanged'));
     } catch (error) {
       console.error('Error updating transaction:', error);
       throw error;
