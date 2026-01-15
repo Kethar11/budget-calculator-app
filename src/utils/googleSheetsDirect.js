@@ -136,7 +136,7 @@ export const readFromGoogleSheets = async () => {
  * 
  * Example: const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_ID/exec';
  */
-const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GOOGLE_SCRIPT_URL || '';
+const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyD5Y-Ln9H0va23HngNc6_jDU7czM0OsLB2Oc94i6s_qVBDabALV72kLQsp7dYROtZYBw/exec';
 
 /**
  * Add a single record to Google Sheets
