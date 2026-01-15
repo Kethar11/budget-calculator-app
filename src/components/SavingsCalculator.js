@@ -8,7 +8,7 @@ import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
 import { useCurrency } from '../contexts/CurrencyContext';
-import { autoSync } from '../utils/backendSync';
+import { writeToGoogleSheets } from '../utils/googleSheetsDirect';
 // Removed Electron storage
 import AmountInput from './AmountInput';
 import RecordModal from './RecordModal';
@@ -153,7 +153,16 @@ const SavingsCalculator = () => {
       // Auto-sync to backend
       const savedSaving = await db.savings.get(savingId);
       if (savedSaving) {
-        autoSync(db, 'saving', savedSaving);
+        // Auto-sync to Google Sheets (downloads Excel file)
+        try {
+          const allTransactions = await db.transactions.toArray();
+          const allExpenses = await db.expenses.toArray();
+          await writeToGoogleSheets(allTransactions, allExpenses);
+          console.log('✅ Auto-synced to Google Sheets (Excel file downloaded)');
+        } catch (excelError) {
+          console.warn('Auto-sync to Google Sheets failed:', excelError);
+        }
+        window.dispatchEvent(new Event('dataChanged'));
       }
       // Auto-sync to Electron storage
       // Removed Electron storage
@@ -230,7 +239,16 @@ const SavingsCalculator = () => {
       // Auto-sync to backend
       const updatedSaving = await db.savings.get(editingId);
       if (updatedSaving) {
-        autoSync(db, 'saving', updatedSaving);
+        // Auto-sync to Google Sheets (downloads Excel file)
+        try {
+          const allTransactions = await db.transactions.toArray();
+          const allExpenses = await db.expenses.toArray();
+          await writeToGoogleSheets(allTransactions, allExpenses);
+          console.log('✅ Auto-synced to Google Sheets (Excel file downloaded)');
+        } catch (excelError) {
+          console.warn('Auto-sync to Google Sheets failed:', excelError);
+        }
+        window.dispatchEvent(new Event('dataChanged'));
       }
     } catch (error) {
       console.error('Error updating savings:', error);
@@ -699,7 +717,16 @@ const SavingsCalculator = () => {
               await loadSavings();
               const updatedSaving = await db.savings.get(selectedRecordModal.id);
               if (updatedSaving) {
-                autoSync(db, 'saving', updatedSaving);
+                // Auto-sync to Google Sheets (downloads Excel file)
+        try {
+          const allTransactions = await db.transactions.toArray();
+          const allExpenses = await db.expenses.toArray();
+          await writeToGoogleSheets(allTransactions, allExpenses);
+          console.log('✅ Auto-synced to Google Sheets (Excel file downloaded)');
+        } catch (excelError) {
+          console.warn('Auto-sync to Google Sheets failed:', excelError);
+        }
+        window.dispatchEvent(new Event('dataChanged'));
               }
               // Removed Electron storage
               setSelectedRecordModal(null);
