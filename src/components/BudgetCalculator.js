@@ -512,8 +512,6 @@ const BudgetCalculator = () => {
         </div>
       </div>
 
-      <BudgetPlanner transactions={transactions} />
-
       <div className="excel-section">
         <ExcelSync />
       </div>

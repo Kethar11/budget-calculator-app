@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wallet, PiggyBank, Receipt, Trash2, Target, Bell } from 'lucide-react';
+import { Wallet, PiggyBank, Receipt, Trash2 } from 'lucide-react';
 import './Navigation.css';
 
 const Navigation = ({ activeTab, setActiveTab }) => {
@@ -29,20 +29,6 @@ const Navigation = ({ activeTab, setActiveTab }) => {
         >
           <Receipt size={20} />
           <span>Expenses</span>
-        </button>
-        <button
-          className={`nav-item ${activeTab === 'goals' ? 'active' : ''}`}
-          onClick={() => setActiveTab('goals')}
-        >
-          <Target size={20} />
-          <span>Goals</span>
-        </button>
-        <button
-          className={`nav-item ${activeTab === 'reminders' ? 'active' : ''}`}
-          onClick={() => setActiveTab('reminders')}
-        >
-          <Bell size={20} />
-          <span>Reminders</span>
         </button>
         <button
           className={`nav-item ${activeTab === 'bin' ? 'active' : ''}`}
