@@ -15,47 +15,78 @@ const GOOGLE_SHEET_ID = '1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0';
  */
 export const readFromGoogleSheets = async () => {
   try {
-    // Read Income sheet (public access)
-    const incomeUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Income`;
-    const incomeResponse = await fetch(incomeUrl);
+    // Read Income sheet (public access) - try different sheet names
+    let incomeData = null;
+    let expenseData = null;
     
-    if (!incomeResponse.ok) {
-      throw new Error('Failed to read Income sheet');
+    // Try "Income" sheet first
+    try {
+      const incomeUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Income`;
+      const incomeResponse = await fetch(incomeUrl);
+      if (incomeResponse.ok) {
+        const incomeText = await incomeResponse.text();
+        incomeData = JSON.parse(incomeText.substring(47).slice(0, -2));
+      }
+    } catch (e) {
+      console.log('Income sheet not found, trying Sheet1...');
     }
     
-    const incomeText = await incomeResponse.text();
-    const incomeJson = JSON.parse(incomeText.substring(47).slice(0, -2));
-    
-    // Read Expense sheet (public access)
-    const expenseUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Expense`;
-    const expenseResponse = await fetch(expenseUrl);
-    
-    if (!expenseResponse.ok) {
-      throw new Error('Failed to read Expense sheet');
+    // Try "Sheet1" if Income doesn't exist
+    if (!incomeData) {
+      try {
+        const sheet1Url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Sheet1`;
+        const sheet1Response = await fetch(sheet1Url);
+        if (sheet1Response.ok) {
+          const sheet1Text = await sheet1Response.text();
+          incomeData = JSON.parse(sheet1Text.substring(47).slice(0, -2));
+        }
+      } catch (e) {
+        console.log('Sheet1 not found');
+      }
     }
     
-    const expenseText = await expenseResponse.text();
-    const expenseJson = JSON.parse(expenseText.substring(47).slice(0, -2));
+    // Read Expense sheet
+    try {
+      const expenseUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Expense`;
+      const expenseResponse = await fetch(expenseUrl);
+      if (expenseResponse.ok) {
+        const expenseText = await expenseResponse.text();
+        expenseData = JSON.parse(expenseText.substring(47).slice(0, -2));
+      }
+    } catch (e) {
+      console.log('Expense sheet not found');
+    }
     
     // Convert to app format
     const transactions = [];
     const expenses = [];
     
+    // Helper function to get cell value
+    const getCellValue = (row, colIndex) => {
+      if (!row.c || !row.c[colIndex]) return null;
+      return row.c[colIndex].v || row.c[colIndex].f || null;
+    };
+    
     // Process Income sheet
-    if (incomeJson.table && incomeJson.table.rows) {
-      const headers = incomeJson.table.cols.map(col => col.label);
-      incomeJson.table.rows.forEach((row, index) => {
+    if (incomeData && incomeData.table && incomeData.table.rows && incomeData.table.rows.length > 1) {
+      const headers = incomeData.table.cols.map(col => col.label || '');
+      incomeData.table.rows.forEach((row, index) => {
         if (index === 0) return; // Skip header
-        if (row.c && row.c[0] && row.c[0].v) {
+        const id = getCellValue(row, headers.indexOf('ID'));
+        const date = getCellValue(row, headers.indexOf('Date'));
+        const amount = getCellValue(row, headers.indexOf('Amount'));
+        
+        // Only process rows with data
+        if (id !== null || date || amount) {
           const transaction = {
-            ID: row.c[headers.indexOf('ID')]?.v || index,
-            Date: row.c[headers.indexOf('Date')]?.v || '',
+            ID: id || index,
+            Date: date || '',
             Type: 'Income',
-            Category: row.c[headers.indexOf('Category')]?.v || '',
-            Subcategory: row.c[headers.indexOf('Subcategory')]?.v || '',
-            Amount: parseFloat(row.c[headers.indexOf('Amount')]?.v || 0),
-            Description: row.c[headers.indexOf('Description')]?.v || '',
-            'Created At': row.c[headers.indexOf('Created At')]?.v || new Date().toISOString()
+            Category: getCellValue(row, headers.indexOf('Category')) || '',
+            Subcategory: getCellValue(row, headers.indexOf('Subcategory')) || '',
+            Amount: parseFloat(amount || 0),
+            Description: getCellValue(row, headers.indexOf('Description')) || '',
+            'Created At': getCellValue(row, headers.indexOf('Created At')) || new Date().toISOString()
           };
           transactions.push(transaction);
         }
@@ -63,19 +94,24 @@ export const readFromGoogleSheets = async () => {
     }
     
     // Process Expense sheet
-    if (expenseJson.table && expenseJson.table.rows) {
-      const headers = expenseJson.table.cols.map(col => col.label);
-      expenseJson.table.rows.forEach((row, index) => {
+    if (expenseData && expenseData.table && expenseData.table.rows && expenseData.table.rows.length > 1) {
+      const headers = expenseData.table.cols.map(col => col.label || '');
+      expenseData.table.rows.forEach((row, index) => {
         if (index === 0) return; // Skip header
-        if (row.c && row.c[0] && row.c[0].v) {
+        const id = getCellValue(row, headers.indexOf('ID'));
+        const date = getCellValue(row, headers.indexOf('Date'));
+        const amount = getCellValue(row, headers.indexOf('Amount'));
+        
+        // Only process rows with data
+        if (id !== null || date || amount) {
           const expense = {
-            ID: row.c[headers.indexOf('ID')]?.v || index,
-            Date: row.c[headers.indexOf('Date')]?.v || '',
-            Category: row.c[headers.indexOf('Category')]?.v || '',
-            Subcategory: row.c[headers.indexOf('Subcategory')]?.v || '',
-            Amount: parseFloat(row.c[headers.indexOf('Amount')]?.v || 0),
-            Description: row.c[headers.indexOf('Description')]?.v || '',
-            'Created At': row.c[headers.indexOf('Created At')]?.v || new Date().toISOString()
+            ID: id || index,
+            Date: date || '',
+            Category: getCellValue(row, headers.indexOf('Category')) || '',
+            Subcategory: getCellValue(row, headers.indexOf('Subcategory')) || '',
+            Amount: parseFloat(amount || 0),
+            Description: getCellValue(row, headers.indexOf('Description')) || '',
+            'Created At': getCellValue(row, headers.indexOf('Created At')) || new Date().toISOString()
           };
           expenses.push(expense);
           transactions.push({ ...expense, Type: 'Expense' });
@@ -91,37 +127,19 @@ export const readFromGoogleSheets = async () => {
 };
 
 /**
- * Write to Google Sheets using Google Apps Script Web App
- * This is the simplest way - no OAuth needed!
+ * Write to Google Sheets - Simple approach: Export to Excel for manual upload
+ * For automatic write, you can set up Google Apps Script (optional)
  */
 export const writeToGoogleSheets = async (transactions, expenses) => {
   try {
-    // Use Google Apps Script Web App URL
-    // You'll need to create this (see GOOGLE_SHEETS_SETUP.md)
-    const SCRIPT_URL = process.env.REACT_APP_GOOGLE_SCRIPT_URL || '';
+    // For now, export to Excel file - user can upload to Google Sheets
+    // This is the simplest approach that works immediately
+    return exportToExcelFile(transactions, expenses);
     
-    if (!SCRIPT_URL) {
-      // Fallback: Export to Excel file for manual upload
-      return exportToExcelFile(transactions, expenses);
-    }
-    
-    const response = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sheetId: GOOGLE_SHEET_ID,
-        transactions: transactions.filter(t => t.type === 'income'),
-        expenses
-      }),
-    });
-    
-    if (!response.ok) throw new Error('Failed to write to Google Sheets');
-    
-    const result = await response.json();
-    return { success: true, message: result.message || 'Data saved to Google Sheets!' };
+    // TODO: Optional - Set up Google Apps Script for automatic write
+    // See GOOGLE_SHEETS_SETUP.md for instructions
   } catch (error) {
     console.error('Error writing to Google Sheets:', error);
-    // Fallback to Excel export
     return exportToExcelFile(transactions, expenses);
   }
 };
