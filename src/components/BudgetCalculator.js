@@ -7,7 +7,7 @@ import TableView from './TableView';
 import FileUpload from './FileUpload';
 import FileLinksModal from './FileLinksModal';
 import { getFilesForTransaction, deleteFilesForTransaction } from '../utils/fileManager';
-import { autoSync } from '../utils/backendSync';
+import { writeToGoogleSheets } from '../utils/googleSheetsDirect';
 // Removed Electron storage
 import DateRangePicker from './DateRangePicker';
 import { useCurrency } from '../contexts/CurrencyContext';
@@ -86,47 +86,18 @@ const BudgetCalculator = () => {
       });
       await loadTransactions();
       
-      // Auto-sync to Excel - SIMPLIFIED: Only Income and Expense
+      // Auto-sync to Google Sheets (downloads Excel file)
       try {
         const allTransactions = await db.transactions.toArray();
         const allExpenses = await db.expenses.toArray();
-        
-        await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/api/excel/update-all`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactions: allTransactions.map(t => ({
-              ID: t.id,
-              Date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
-              Time: t.date ? new Date(t.date).toTimeString().slice(0, 8) : '',
-              Type: t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : '',
-              Category: t.category || '',
-              Subcategory: t.subcategory || '',
-              Amount: t.amount || 0,
-              Description: t.description || '',
-              'Created At': t.createdAt || new Date().toISOString()
-            })),
-            expenses: allExpenses.map(e => ({
-              ID: e.id,
-              Date: e.date ? new Date(e.date).toISOString().split('T')[0] : '',
-              Time: e.date ? new Date(e.date).toTimeString().slice(0, 8) : '',
-              Category: e.category || '',
-              Subcategory: e.subcategory || '',
-              Amount: e.amount || 0,
-              Description: e.description || '',
-              'Created At': e.createdAt || new Date().toISOString()
-            }))
-          })
-        });
+        await writeToGoogleSheets(allTransactions, allExpenses);
+        console.log('✅ Auto-synced to Google Sheets (Excel file downloaded)');
       } catch (excelError) {
-        console.warn('Excel sync failed:', excelError);
+        console.warn('Auto-sync to Google Sheets failed:', excelError);
       }
       
-      // Auto-sync to backend
-      const savedTransaction = await db.transactions.get(transactionId);
-      if (savedTransaction) {
-        autoSync(db, 'transaction', savedTransaction);
-      }
+      // Trigger data change event
+      window.dispatchEvent(new Event('dataChanged'));
       // Removed Electron storage
       return transactionId;
     } catch (error) {

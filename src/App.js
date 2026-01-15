@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './utils/database';
-import { restoreFromBackend } from './utils/backendSync';
+import { readFromGoogleSheets } from './utils/googleSheetsDirect';
 // Removed Electron storage - using IndexedDB only
 import './App.css';
 import BudgetCalculator from './components/BudgetCalculator';
@@ -25,48 +25,88 @@ function AppContent({ onLogout }) {
   });
 
   useEffect(() => {
-    let googleSheetsCleanup = null;
-    
-    // Initialize storage - restore from backend
-    const initStorage = async () => {
-      // Restore from backend (Excel sync)
-      await restoreFromBackend(db);
-
-      // Initialize Google Sheets sync (works on both web and mobile)
+    // Auto-fetch from Google Sheets on page load
+    const fetchFromGoogleSheets = async () => {
       try {
-        const { autoSyncOnLoad, setupDailySync, syncOnDataChange } = await import('./utils/googleSheetsSync');
+        console.log('🔄 Auto-fetching from Google Sheets on page load...');
+        const result = await readFromGoogleSheets();
         
-        // Auto-sync from Google Sheets on app load
-        await autoSyncOnLoad(db);
-        
-        // Set up daily sync
-        googleSheetsCleanup = setupDailySync(db);
-        
-        // Listen for data changes to sync to Google Sheets
-        const handleDataChange = () => {
-          syncOnDataChange();
-        };
-        window.addEventListener('dataChanged', handleDataChange);
-        
-        // Also sync on visibility change (when app becomes active)
-        const handleVisibilityChange = () => {
-          if (!document.hidden) {
-            autoSyncOnLoad(db); // Fetch latest data when app becomes visible
+        if (result.success && (result.transactions.length > 0 || result.expenses.length > 0)) {
+          let importedCount = 0;
+          
+          // Import transactions
+          for (const t of result.transactions) {
+            try {
+              const existing = await db.transactions.get(t.ID);
+              if (!existing) {
+                await db.transactions.add({
+                  id: t.ID,
+                  type: t.Type?.toLowerCase() || 'income',
+                  category: t.Category || '',
+                  subcategory: t.Subcategory || '',
+                  amount: parseFloat(t.Amount) || 0,
+                  description: t.Description || '',
+                  date: t.Date || t['Created At'] || new Date().toISOString(),
+                  createdAt: t['Created At'] || new Date().toISOString(),
+                  files: [],
+                  entryCurrency: 'EUR'
+                });
+                importedCount++;
+              }
+            } catch (err) {
+              console.warn('Error importing transaction:', err);
+            }
           }
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        if (googleSheetsCleanup) {
-          const originalCleanup = googleSheetsCleanup;
-          googleSheetsCleanup = () => {
-            originalCleanup();
-            window.removeEventListener('dataChanged', handleDataChange);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-          };
+          
+          // Import expenses
+          for (const e of result.expenses) {
+            try {
+              const existing = await db.expenses.get(e.ID);
+              if (!existing) {
+                await db.expenses.add({
+                  id: e.ID,
+                  category: e.Category || '',
+                  subcategory: e.Subcategory || '',
+                  amount: parseFloat(e.Amount) || 0,
+                  description: e.Description || '',
+                  date: e.Date || e['Created At'] || new Date().toISOString(),
+                  createdAt: e['Created At'] || new Date().toISOString(),
+                  files: [],
+                  entryCurrency: 'EUR'
+                });
+                importedCount++;
+              }
+            } catch (err) {
+              console.warn('Error importing expense:', err);
+            }
+          }
+          
+          if (importedCount > 0) {
+            console.log(`✅ Auto-fetched ${importedCount} records from Google Sheets`);
+            window.dispatchEvent(new Event('dataChanged'));
+          }
         }
       } catch (error) {
-        console.warn('Google Sheets sync not available:', error);
+        console.warn('Auto-fetch from Google Sheets failed:', error);
       }
+    };
+    
+    // Initialize storage - fetch from Google Sheets
+    const initStorage = async () => {
+      // Auto-fetch from Google Sheets on app load
+      await fetchFromGoogleSheets();
+      
+      // Also fetch when app becomes visible (user switches back to tab)
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          fetchFromGoogleSheets();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     };
     
     const loadRealTimeStats = async () => {
@@ -150,7 +190,6 @@ function AppContent({ onLogout }) {
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('dataChanged', handleDataChange);
-      if (googleSheetsCleanup) googleSheetsCleanup();
     };
   }, []);
 
