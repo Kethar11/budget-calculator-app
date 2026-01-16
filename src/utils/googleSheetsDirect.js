@@ -182,12 +182,22 @@ export const addRecordToGoogleSheets = async (record, type) => {
     return { success: true, message: result.message || 'Record added to Google Sheets' };
   } catch (error) {
     console.error('Error adding record to Google Sheets:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     
     // Check if it's a CORS or network error
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.name === 'TypeError') {
       return { 
         success: false, 
-        error: 'CORS Error: Please update your Google Apps Script to include CORS headers. See SETUP_GOOGLE_SHEETS_NOW.md for the updated script code.' 
+        error: 'Connection Error: Please verify:\n\n' +
+          '1. Your Google Apps Script is deployed as Web App\n' +
+          '2. Access is set to "Anyone"\n' +
+          '3. You clicked "New version" and redeployed after updating the script\n' +
+          '4. The Web App URL is correct: ' + GOOGLE_SCRIPT_URL + '\n\n' +
+          'Try testing the URL directly in your browser first.'
       };
     }
     
