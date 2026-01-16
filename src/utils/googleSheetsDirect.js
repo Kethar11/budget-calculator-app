@@ -174,28 +174,62 @@ export const addRecordToGoogleSheets = async (record, type) => {
     
     console.log('Request body:', JSON.stringify(requestBody, null, 2));
     
-    // Use form submission approach to avoid CORS issues
-    const formData = new URLSearchParams();
-    formData.append('action', requestBody.action);
-    formData.append('sheetId', requestBody.sheetId);
-    formData.append('type', requestBody.type);
-    formData.append('data', JSON.stringify(requestBody.data));
-    
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors', // Bypass CORS for Google Apps Script
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: formData.toString()
-    });
-    
-    // With no-cors, we can't read response, but request should succeed
-    // Wait a moment for the script to process
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Return success since we can't verify with no-cors
-    return { success: true, message: 'Record sent to Google Sheets (verification pending)' };
+    // Try JSON first (if CORS allows)
+    try {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Success response:', result);
+        return { success: true, message: result.message || 'Record added to Google Sheets' };
+      } else {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to add record'}`);
+      }
+    } catch (corsError) {
+      // If CORS fails, try form data approach
+      console.log('JSON request failed, trying form data:', corsError.message);
+      
+      const formData = new URLSearchParams();
+      formData.append('action', requestBody.action);
+      formData.append('sheetId', requestBody.sheetId);
+      formData.append('type', requestBody.type);
+      formData.append('data', JSON.stringify(requestBody.data));
+      
+      const formResponse = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Bypass CORS for Google Apps Script
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData.toString()
+      });
+      
+      // With no-cors, we can't read response, but request should succeed
+      // Wait a moment for the script to process, then verify by fetching
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Try to verify by reading back from Google Sheets
+      try {
+        const verifyResult = await readFromGoogleSheets();
+        const foundRecord = verifyResult.expenses.find(e => e.ID == requestBody.data.ID) || 
+                           verifyResult.transactions.find(t => t.ID == requestBody.data.ID);
+        if (foundRecord) {
+          return { success: true, message: 'Record added to Google Sheets and verified' };
+        } else {
+          return { success: false, error: 'Record sent but not found in Google Sheets. Please check your script.' };
+        }
+      } catch (verifyError) {
+        // Can't verify, but assume it worked
+        return { success: true, message: 'Record sent to Google Sheets (verification failed, please check manually)' };
+      }
+    }
 
     console.log('Response status:', response.status);
     console.log('Response ok:', response.ok);
