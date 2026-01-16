@@ -21,10 +21,13 @@ Your Google Sheet: https://docs.google.com/spreadsheets/d/1Dp4UGkT8h-PHnEXDPbGqn
 Copy ALL of this code and paste it:
 
 ```javascript
+// Handle CORS preflight requests
+function doOptions() {
+  return ContentService.createTextOutput('')
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e) {
-  // Set CORS headers to allow requests from any origin
-  const output = ContentService.createTextOutput();
-  
   try {
     const data = JSON.parse(e.postData.contents);
     const sheetId = data.sheetId;
@@ -149,12 +152,15 @@ function doPost(e) {
         });
       }
       
-      return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'All data synced' }));
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'All data synced' }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
     
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Unknown action' }));
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Unknown action' }))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }));
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 ```
