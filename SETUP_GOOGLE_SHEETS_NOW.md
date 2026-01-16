@@ -22,6 +22,9 @@ Copy ALL of this code and paste it:
 
 ```javascript
 function doPost(e) {
+  // Set CORS headers to allow requests from any origin
+  const output = ContentService.createTextOutput();
+  
   try {
     const data = JSON.parse(e.postData.contents);
     const sheetId = data.sheetId;
@@ -51,7 +54,8 @@ function doPost(e) {
       ];
       
       sheet.appendRow(rowData);
-      return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record added' }));
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record added' }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
     
     if (action === 'update') {
@@ -77,33 +81,40 @@ function doPost(e) {
             data.data.Description,
             data.data['Created At']
           ]]);
-          return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record updated' }));
+          return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record updated' }))
+            .setMimeType(ContentService.MimeType.JSON);
         }
       }
       
-      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Record not found' }));
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Record not found' }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
     
     if (action === 'delete') {
       const sheet = ss.getSheetByName(data.type === 'income' ? 'Income' : 'Expense');
-      if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Sheet not found' }));
+      if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Sheet not found' }))
+        .setMimeType(ContentService.MimeType.JSON);
       
       const dataRange = sheet.getDataRange();
       const values = dataRange.getValues();
-      if (values.length === 0) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'No data' }));
+      if (values.length === 0) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'No data' }))
+        .setMimeType(ContentService.MimeType.JSON);
       
       const headers = values[0];
       const idIndex = headers.indexOf('ID');
-      if (idIndex === -1) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'ID column not found' }));
+      if (idIndex === -1) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'ID column not found' }))
+        .setMimeType(ContentService.MimeType.JSON);
       
       for (let i = 1; i < values.length; i++) {
         if (values[i][idIndex] == data.recordId) {
           sheet.deleteRow(i + 1);
-          return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record deleted' }));
+          return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record deleted' }))
+            .setMimeType(ContentService.MimeType.JSON);
         }
       }
       
-      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Record not found' }));
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Record not found' }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
     
     if (action === 'syncAll') {

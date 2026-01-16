@@ -173,12 +173,28 @@ export const addRecordToGoogleSheets = async (record, type) => {
       })
     });
 
-    if (!response.ok) throw new Error('Failed to add record');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to add record'}`);
+    }
+    
     const result = await response.json();
     return { success: true, message: result.message || 'Record added to Google Sheets' };
   } catch (error) {
     console.error('Error adding record to Google Sheets:', error);
-    return { success: false, error: error.message };
+    
+    // Check if it's a CORS or network error
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      return { 
+        success: false, 
+        error: 'CORS Error: Please update your Google Apps Script to include CORS headers. See SETUP_GOOGLE_SHEETS_NOW.md for the updated script code.' 
+      };
+    }
+    
+    return { 
+      success: false, 
+      error: error.message || 'Failed to connect to Google Sheets. Please check your Google Apps Script deployment and make sure it\'s deployed as a Web App with "Anyone" access.' 
+    };
   }
 };
 
