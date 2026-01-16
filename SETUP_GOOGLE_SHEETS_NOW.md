@@ -21,9 +21,9 @@ Your Google Sheet: https://docs.google.com/spreadsheets/d/1Dp4UGkT8h-PHnEXDPbGqn
 Copy ALL of this code and paste it:
 
 ```javascript
-// Handle CORS preflight requests
-function doOptions() {
-  return ContentService.createTextOutput('')
+// Handle CORS preflight requests (OPTIONS)
+function doOptions(e) {
+  return ContentService.createTextOutput(JSON.stringify({ success: true }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
