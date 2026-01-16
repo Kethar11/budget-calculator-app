@@ -31,31 +31,37 @@ function doPost(e) {
   try {
     // Handle both JSON and form data (for CORS bypass)
     let data;
+    
+    // Check if it's JSON (from postData.contents)
     if (e.postData && e.postData.contents) {
       try {
-        data = JSON.parse(e.postData.contents);
-      } catch (e) {
-        // Try parsing as form data
+        const jsonData = JSON.parse(e.postData.contents);
+        data = jsonData;
+      } catch (parseError) {
+        // Not JSON, try form data
         const params = e.parameter || {};
         data = {
           action: params.action,
           sheetId: params.sheetId,
           type: params.type,
-          data: params.data ? JSON.parse(params.data) : {},
+          data: params.data ? JSON.parse(decodeURIComponent(params.data)) : {},
           recordId: params.recordId
         };
       }
     } else {
-      // Form data
+      // Form data only (from e.parameter)
       const params = e.parameter || {};
       data = {
         action: params.action,
         sheetId: params.sheetId,
         type: params.type,
-        data: params.data ? JSON.parse(params.data) : {},
+        data: params.data ? JSON.parse(decodeURIComponent(params.data)) : {},
         recordId: params.recordId
       };
     }
+    
+    // Log for debugging (check Executions in Apps Script)
+    console.log('Received data:', JSON.stringify(data));
     
     const sheetId = data.sheetId;
     const action = data.action;
@@ -73,17 +79,26 @@ function doPost(e) {
         sheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
       }
       
+      // Ensure data.data exists
+      if (!data.data) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'No data provided' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      
       const rowData = [
-        data.data.ID,
-        data.data.Date,
-        data.data.Category,
-        data.data.Subcategory,
-        data.data.Amount,
-        data.data.Description,
-        data.data['Created At']
+        data.data.ID || '',
+        data.data.Date || '',
+        data.data.Category || '',
+        data.data.Subcategory || '',
+        data.data.Amount || 0,
+        data.data.Description || '',
+        data.data['Created At'] || new Date().toISOString()
       ];
       
+      console.log('Adding row:', rowData);
       sheet.appendRow(rowData);
+      console.log('Row added successfully');
+      
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record added' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
