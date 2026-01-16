@@ -29,7 +29,34 @@ function doOptions(e) {
 
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents);
+    // Handle both JSON and form data (for CORS bypass)
+    let data;
+    if (e.postData && e.postData.contents) {
+      try {
+        data = JSON.parse(e.postData.contents);
+      } catch (e) {
+        // Try parsing as form data
+        const params = e.parameter || {};
+        data = {
+          action: params.action,
+          sheetId: params.sheetId,
+          type: params.type,
+          data: params.data ? JSON.parse(params.data) : {},
+          recordId: params.recordId
+        };
+      }
+    } else {
+      // Form data
+      const params = e.parameter || {};
+      data = {
+        action: params.action,
+        sheetId: params.sheetId,
+        type: params.type,
+        data: params.data ? JSON.parse(params.data) : {},
+        recordId: params.recordId
+      };
+    }
+    
     const sheetId = data.sheetId;
     const action = data.action;
     
