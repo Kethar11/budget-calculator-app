@@ -154,31 +154,45 @@ export const addRecordToGoogleSheets = async (record, type) => {
   }
 
   try {
+    console.log('Attempting to add record to Google Sheets:', { type, recordId: record.id });
+    console.log('Google Script URL:', GOOGLE_SCRIPT_URL);
+    
+    const requestBody = {
+      action: 'add',
+      sheetId: GOOGLE_SHEET_ID,
+      type: type, // 'income' or 'expense'
+      data: {
+        ID: record.id,
+        Date: record.date ? new Date(record.date).toISOString().split('T')[0] : '',
+        Category: record.category || '',
+        Subcategory: record.subcategory || '',
+        Amount: record.amount || 0,
+        Description: record.description || '',
+        'Created At': record.createdAt || new Date().toISOString()
+      }
+    };
+    
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+    
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'add',
-        sheetId: GOOGLE_SHEET_ID,
-        type: type, // 'income' or 'expense'
-        data: {
-          ID: record.id,
-          Date: record.date ? new Date(record.date).toISOString().split('T')[0] : '',
-          Category: record.category || '',
-          Subcategory: record.subcategory || '',
-          Amount: record.amount || 0,
-          Description: record.description || '',
-          'Created At': record.createdAt || new Date().toISOString()
-        }
-      })
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+    
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('Response error text:', errorText);
       throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to add record'}`);
     }
     
     const result = await response.json();
+    console.log('Success response:', result);
     return { success: true, message: result.message || 'Record added to Google Sheets' };
   } catch (error) {
     console.error('Error adding record to Google Sheets:', error);
@@ -192,12 +206,13 @@ export const addRecordToGoogleSheets = async (record, type) => {
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.name === 'TypeError') {
       return { 
         success: false, 
-        error: 'Connection Error: Please verify:\n\n' +
-          '1. Your Google Apps Script is deployed as Web App\n' +
-          '2. Access is set to "Anyone"\n' +
-          '3. You clicked "New version" and redeployed after updating the script\n' +
-          '4. The Web App URL is correct: ' + GOOGLE_SCRIPT_URL + '\n\n' +
-          'Try testing the URL directly in your browser first.'
+        error: 'Connection Error: The Google Apps Script Web App is not responding.\n\n' +
+          'Please verify:\n' +
+          '1. Script is deployed as Web App (Deploy → Manage deployments)\n' +
+          '2. Access is set to "Anyone" (including anonymous)\n' +
+          '3. You created a NEW VERSION and redeployed after updating the script\n' +
+          '4. Test the URL in browser: ' + GOOGLE_SCRIPT_URL + '\n\n' +
+          'If the URL shows an error, the script needs to be redeployed.'
       };
     }
     
