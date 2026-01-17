@@ -491,22 +491,29 @@ export const clearGoogleSheets = async () => {
   }
 
   try {
+    console.log('Sending clear request to Google Apps Script...');
+    console.log('URL:', GOOGLE_SCRIPT_URL);
+    console.log('Sheet ID:', GOOGLE_SHEET_ID);
+    
+    const formData = new URLSearchParams();
+    formData.append('action', 'clear');
+    formData.append('sheetId', GOOGLE_SHEET_ID);
+    
+    console.log('Form data:', formData.toString());
+    
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 
         'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: new URLSearchParams({
-        action: 'clear',
-        sheetId: GOOGLE_SHEET_ID
-      }).toString()
+      body: formData.toString()
     });
 
     // With no-cors, we can't read response, but request should succeed
     // Wait longer for the script to process (Google Sheets can be slow)
     console.log('Waiting for Google Apps Script to clear sheets...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 4000)); // Increased wait time
     
     // Try to verify by reading from Google Sheets (with retries)
     let verifyResult;

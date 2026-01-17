@@ -325,44 +325,44 @@ function doPost(e) {
     }
     
     if (action === 'clear') {
-      Logger.log('Clearing all sheets');
+      Logger.log('=== CLEAR ACTION STARTED ===');
+      Logger.log('Sheet ID: ' + sheetId);
+      
       let incomeSheet = ss.getSheetByName('Income');
       let expenseSheet = ss.getSheetByName('Expense');
       
+      Logger.log('Income sheet exists: ' + (incomeSheet ? 'yes' : 'no'));
+      Logger.log('Expense sheet exists: ' + (expenseSheet ? 'yes' : 'no'));
+      
       if (incomeSheet) {
-        const lastRow = incomeSheet.getLastRow();
-        if (lastRow > 1) {
-          // Delete all rows except header (row 1)
-          incomeSheet.deleteRows(2, lastRow - 1);
-          Logger.log('Deleted ' + (lastRow - 1) + ' rows from Income sheet');
-        } else if (lastRow === 1) {
-          // Sheet only has header, clear it and re-add header
+        try {
+          const lastRow = incomeSheet.getLastRow();
+          Logger.log('Income sheet last row: ' + lastRow);
+          
+          // Clear entire sheet and re-add header (most reliable method)
           incomeSheet.clear();
           incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
-        } else {
-          // Empty sheet, just add header
-          incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+          Logger.log('Income sheet cleared successfully');
+        } catch (error) {
+          Logger.log('ERROR clearing Income sheet: ' + error.toString());
         }
-        Logger.log('Income sheet cleared');
       }
       
       if (expenseSheet) {
-        const lastRow = expenseSheet.getLastRow();
-        if (lastRow > 1) {
-          // Delete all rows except header (row 1)
-          expenseSheet.deleteRows(2, lastRow - 1);
-          Logger.log('Deleted ' + (lastRow - 1) + ' rows from Expense sheet');
-        } else if (lastRow === 1) {
-          // Sheet only has header, clear it and re-add header
+        try {
+          const lastRow = expenseSheet.getLastRow();
+          Logger.log('Expense sheet last row: ' + lastRow);
+          
+          // Clear entire sheet and re-add header (most reliable method)
           expenseSheet.clear();
           expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
-        } else {
-          // Empty sheet, just add header
-          expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+          Logger.log('Expense sheet cleared successfully');
+        } catch (error) {
+          Logger.log('ERROR clearing Expense sheet: ' + error.toString());
         }
-        Logger.log('Expense sheet cleared');
       }
       
+      Logger.log('=== CLEAR ACTION COMPLETED ===');
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'All sheets cleared' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
