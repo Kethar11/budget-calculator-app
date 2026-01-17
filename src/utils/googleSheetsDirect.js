@@ -58,9 +58,9 @@ export const readFromGoogleSheets = async () => {
     let incomeData = null;
     let expenseData = null;
     
-    // Try "Income" sheet first
+    // Try "Income" sheet first (add cache-busting to avoid stale data)
     try {
-      const incomeUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Income`;
+      const incomeUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Income&t=${Date.now()}`;
       const incomeResponse = await fetch(incomeUrl);
       if (incomeResponse.ok) {
         const incomeText = await incomeResponse.text();
@@ -73,7 +73,7 @@ export const readFromGoogleSheets = async () => {
     // Try "Sheet1" if Income doesn't exist
     if (!incomeData) {
       try {
-        const sheet1Url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Sheet1`;
+        const sheet1Url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Sheet1&t=${Date.now()}`;
         const sheet1Response = await fetch(sheet1Url);
         if (sheet1Response.ok) {
           const sheet1Text = await sheet1Response.text();
@@ -84,9 +84,9 @@ export const readFromGoogleSheets = async () => {
       }
     }
     
-    // Read Expense sheet
+    // Read Expense sheet (add cache-busting to avoid stale data)
     try {
-      const expenseUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Expense`;
+      const expenseUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Expense&t=${Date.now()}`;
       const expenseResponse = await fetch(expenseUrl);
       if (expenseResponse.ok) {
         const expenseText = await expenseResponse.text();
