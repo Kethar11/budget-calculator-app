@@ -66,16 +66,8 @@ const ExpenseCalculator = () => {
     };
   }, []);
 
-  useEffect(() => {
-    // Trigger header stats update when expenses change
-    if (!loading) {
-      // Small delay to ensure data is saved
-      const timer = setTimeout(() => {
-        window.dispatchEvent(new Event('dataChanged'));
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [expenses, loading]);
+  // Removed useEffect that was causing infinite loop
+  // Stats will update automatically when data actually changes via other events
 
   useEffect(() => {
     const loadFilesForAll = async () => {
@@ -98,12 +90,9 @@ const ExpenseCalculator = () => {
   const loadExpenses = async () => {
     try {
       const allExpenses = await db.expenses.toArray();
-      console.log('📋 ExpenseCalculator loaded expenses:', allExpenses.length, allExpenses);
       setExpenses(allExpenses);
-      // Trigger header update after loading expenses
-      setTimeout(() => {
-        window.dispatchEvent(new Event('dataChanged'));
-      }, 200);
+      // Don't trigger dataChanged here - it causes infinite loops
+      // Stats will update when data actually changes (add/update/delete)
     } catch (error) {
       console.error('Error loading expenses:', error);
     } finally {
@@ -120,9 +109,22 @@ const ExpenseCalculator = () => {
 
     try {
       // Combine date and time into ISO string
-      const dateTime = formData.date && formData.time 
-        ? new Date(`${formData.date}T${formData.time}`).toISOString()
-        : new Date().toISOString();
+      // Safely parse date and time
+      let dateTime;
+      if (formData.date && formData.time) {
+        try {
+          const dateObj = new Date(`${formData.date}T${formData.time}`);
+          if (!isNaN(dateObj.getTime())) {
+            dateTime = dateObj.toISOString();
+          } else {
+            dateTime = new Date().toISOString();
+          }
+        } catch (e) {
+          dateTime = new Date().toISOString();
+        }
+      } else {
+        dateTime = new Date().toISOString();
+      }
       
       // Generate temporary ID
       const tempId = Date.now();
@@ -282,7 +284,21 @@ const ExpenseCalculator = () => {
 
   const startEdit = (expense) => {
     setEditingId(expense.id);
-    const expenseDate = expense.date ? new Date(expense.date) : new Date(expense.createdAt);
+    // Safely parse expense date
+    let expenseDate;
+    try {
+      const dateStr = expense.date || expense.createdAt;
+      if (dateStr) {
+        expenseDate = new Date(dateStr);
+        if (isNaN(expenseDate.getTime())) {
+          expenseDate = new Date();
+        }
+      } else {
+        expenseDate = new Date();
+      }
+    } catch (e) {
+      expenseDate = new Date();
+    }
     setFormData({
       category: expense.category || '',
       subcategory: expense.subcategory || '',
@@ -318,9 +334,22 @@ const ExpenseCalculator = () => {
 
     try {
       // Combine date and time into ISO string
-      const dateTime = formData.date && formData.time 
-        ? new Date(`${formData.date}T${formData.time}`).toISOString()
-        : new Date().toISOString();
+      // Safely parse date and time
+      let dateTime;
+      if (formData.date && formData.time) {
+        try {
+          const dateObj = new Date(`${formData.date}T${formData.time}`);
+          if (!isNaN(dateObj.getTime())) {
+            dateTime = dateObj.toISOString();
+          } else {
+            dateTime = new Date().toISOString();
+          }
+        } catch (e) {
+          dateTime = new Date().toISOString();
+        }
+      } else {
+        dateTime = new Date().toISOString();
+      }
       
       // Update in Google Sheets
       try {
@@ -386,7 +415,21 @@ const ExpenseCalculator = () => {
     // Filter by date range
     if (startDate || endDate) {
       filtered = filtered.filter(expense => {
-        const expenseDate = new Date(expense.date || expense.createdAt);
+        // Safely parse expense date
+        let expenseDate;
+        try {
+          const dateStr = expense.date || expense.createdAt;
+          if (dateStr) {
+            expenseDate = new Date(dateStr);
+            if (isNaN(expenseDate.getTime())) {
+              expenseDate = new Date();
+            }
+          } else {
+            expenseDate = new Date();
+          }
+        } catch (e) {
+          expenseDate = new Date();
+        }
         const expenseDateStr = expenseDate.toISOString().split('T')[0];
         
         if (startDate && endDate) {
@@ -434,7 +477,21 @@ const ExpenseCalculator = () => {
   const monthlyExpenseData = useMemo(() => {
     const monthly = {};
     filteredExpenses.forEach(expense => {
-      const date = new Date(expense.date || expense.createdAt);
+      // Safely parse date
+      let date;
+      try {
+        const dateStr = expense.date || expense.createdAt;
+        if (dateStr) {
+          date = new Date(dateStr);
+          if (isNaN(date.getTime())) {
+            date = new Date();
+          }
+        } else {
+          date = new Date();
+        }
+      } catch (e) {
+        date = new Date();
+      }
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthly[monthKey]) {
         monthly[monthKey] = { month: monthKey, amount: 0 };
@@ -738,19 +795,48 @@ const ExpenseCalculator = () => {
           title={`All Expenses${(startDate || endDate || categoryFilter !== 'all' || searchQuery) ? ' (Filtered)' : ''}`}
           onRowDoubleClick={(row) => setSelectedRecordModal(row)}
           data={filteredExpenses
-            .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
-            .map(expense => ({
-              ...expense,
-              formattedDate: new Date(expense.date || expense.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-              }),
-              formattedTime: new Date(expense.date || expense.createdAt).toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })
-            }))}
+            .sort((a, b) => {
+              // Safely parse dates for sorting
+              const dateA = a.date || a.createdAt;
+              const dateB = b.date || b.createdAt;
+              try {
+                const dateObjA = dateA ? new Date(dateA) : new Date(0);
+                const dateObjB = dateB ? new Date(dateB) : new Date(0);
+                return (isNaN(dateObjB.getTime()) ? 0 : dateObjB.getTime()) - (isNaN(dateObjA.getTime()) ? 0 : dateObjA.getTime());
+              } catch (e) {
+                return 0;
+              }
+            })
+            .map(expense => {
+              // Safely parse dates for display
+              let displayDate;
+              try {
+                const dateStr = expense.date || expense.createdAt;
+                if (dateStr) {
+                  displayDate = new Date(dateStr);
+                  if (isNaN(displayDate.getTime())) {
+                    displayDate = new Date();
+                  }
+                } else {
+                  displayDate = new Date();
+                }
+              } catch (e) {
+                displayDate = new Date();
+              }
+              
+              return {
+                ...expense,
+                formattedDate: displayDate.toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                }),
+                formattedTime: displayDate.toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              };
+            })}
           columns={[
             { key: 'category', header: 'Category', render: (val, row) => (
               <span>

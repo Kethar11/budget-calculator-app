@@ -148,15 +148,7 @@ function AppContent({ onLogout }) {
         // Combine expenses from both transactions and expenses table
         const combinedTotalExpenses = totalExpenses + totalExpenseAmount;
 
-        // Only log in development mode to reduce console spam
-        if (process.env.NODE_ENV === 'development') {
-          console.log('📊 Header Stats Calculation:', {
-            transactionsExpenses: totalExpenses,
-            expensesTable: totalExpenseAmount,
-            combined: combinedTotalExpenses,
-            expenseRecordsCount: expenseRecords.length
-          });
-        }
+        // Removed console.log to prevent infinite loop spam
 
         setRealTimeStats({
           totalBalance: totalIncome - combinedTotalExpenses,

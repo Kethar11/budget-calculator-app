@@ -246,27 +246,8 @@ const ExcelSync = ({ onDataFetched }) => {
     }
   };
 
-  // Clear Excel sheet (with password)
+  // Clear Excel sheet (automatic - no confirmations)
   const clearExcelSheet = async () => {
-    // Ask for password
-    const password = window.prompt('⚠️ Enter password to clear Google Sheets:');
-    if (password !== '780788') {
-      setStatus({ 
-        type: 'error', 
-        message: 'Incorrect password. Google Sheets not cleared.' 
-      });
-      setTimeout(() => setStatus(null), 3000);
-      return;
-    }
-
-    if (!window.confirm('⚠️ WARNING: This will delete ALL data from Google Sheets AND local storage! This cannot be undone. Are you absolutely sure?')) {
-      return;
-    }
-
-    if (!window.confirm('⚠️ LAST WARNING: All data will be permanently deleted. Continue?')) {
-      return;
-    }
-
     setSyncing(true);
     setStatus({ 
       type: 'info', 
@@ -291,13 +272,11 @@ const ExcelSync = ({ onDataFetched }) => {
         type: 'success', 
         message: '✅ Google Sheets and local data cleared successfully! Page will reload...' 
       });
-
-      window.dispatchEvent(new Event('dataChanged'));
       
-      // Reload page after 2 seconds
+      // Reload page after 1 second
       setTimeout(() => {
         window.location.reload();
-      }, 2000);
+      }, 1000);
     } catch (error) {
       console.error('Error clearing data:', error);
       setStatus({ 
