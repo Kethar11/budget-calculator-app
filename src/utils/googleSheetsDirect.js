@@ -504,26 +504,42 @@ export const clearGoogleSheets = async () => {
     });
 
     // With no-cors, we can't read response, but request should succeed
-    // Wait longer for the script to process
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait longer for the script to process (Google Sheets can be slow)
+    console.log('Waiting for Google Apps Script to clear sheets...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Try to verify by reading from Google Sheets
-    try {
-      const verifyResult = await readFromGoogleSheets();
-      const totalRecords = (verifyResult.transactions?.length || 0) + (verifyResult.expenses?.length || 0);
-      
-      if (totalRecords === 0) {
-        return { success: true, message: 'Google Sheets cleared successfully and verified' };
-      } else {
-        return { 
-          success: false, 
-          error: 'Google Sheets clear command sent, but ' + totalRecords + ' records still found. Please check Google Apps Script logs.' 
-        };
+    // Try to verify by reading from Google Sheets (with retries)
+    let verifyResult;
+    let totalRecords = -1;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); // Wait longer each attempt
+        verifyResult = await readFromGoogleSheets();
+        totalRecords = (verifyResult.transactions?.length || 0) + (verifyResult.expenses?.length || 0);
+        
+        if (totalRecords === 0) {
+          return { success: true, message: 'Google Sheets cleared successfully and verified' };
+        }
+        console.log(`Verification attempt ${attempt + 1}: ${totalRecords} records still found`);
+      } catch (verifyError) {
+        console.warn('Verification attempt ' + (attempt + 1) + ' failed:', verifyError);
       }
-    } catch (verifyError) {
-      // Can't verify, but assume it worked
-      return { success: true, message: 'Google Sheets clear command sent (verification failed, please check manually)' };
     }
+    
+    // If we still have records after retries, return error
+    if (totalRecords > 0) {
+      return { 
+        success: false, 
+        error: 'Google Sheets clear command sent, but ' + totalRecords + ' records still found after multiple attempts. Please:\n\n' +
+          '1. Check Google Apps Script Executions log\n' +
+          '2. Make sure you updated the script with the new clear function\n' +
+          '3. Redeployed the script as a NEW VERSION\n' +
+          '4. Manually refresh your Google Sheet to see if it cleared'
+      };
+    }
+    
+    // Can't verify, but assume it worked
+    return { success: true, message: 'Google Sheets clear command sent (could not verify, please check manually)' };
   } catch (error) {
     console.error('Error clearing Google Sheets:', error);
     return { success: false, error: error.message || 'Failed to clear Google Sheets' };

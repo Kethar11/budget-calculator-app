@@ -49,28 +49,48 @@ function doPost(e) {
         const params = e.parameter || {};
         Logger.log('Form params: ' + JSON.stringify(params));
         
-        try {
-          const dataString = params.data || '';
-          Logger.log('Data string (raw): ' + dataString);
-          const decodedData = decodeURIComponent(dataString);
-          Logger.log('Data string (decoded): ' + decodedData);
-          const parsedData = JSON.parse(decodedData);
-          Logger.log('Data string (parsed): ' + JSON.stringify(parsedData));
-          
+        // Handle clear action (no data field needed)
+        if (params.action === 'clear') {
           data = {
             action: params.action,
-            sheetId: params.sheetId,
-            type: params.type,
-            data: parsedData,
-            recordId: params.recordId
+            sheetId: params.sheetId
           };
-        } catch (formParseError) {
-          Logger.log('ERROR parsing form data: ' + formParseError.toString());
-          return ContentService.createTextOutput(JSON.stringify({ 
-            success: false, 
-            error: 'Failed to parse form data: ' + formParseError.toString() 
-          }))
-            .setMimeType(ContentService.MimeType.JSON);
+          Logger.log('Clear action detected, data: ' + JSON.stringify(data));
+        } else {
+          // Other actions need data field
+          try {
+            const dataString = params.data || '';
+            if (dataString) {
+              Logger.log('Data string (raw): ' + dataString);
+              const decodedData = decodeURIComponent(dataString);
+              Logger.log('Data string (decoded): ' + decodedData);
+              const parsedData = JSON.parse(decodedData);
+              Logger.log('Data string (parsed): ' + JSON.stringify(parsedData));
+              
+              data = {
+                action: params.action,
+                sheetId: params.sheetId,
+                type: params.type,
+                data: parsedData,
+                recordId: params.recordId
+              };
+            } else {
+              // No data field, just action and sheetId
+              data = {
+                action: params.action,
+                sheetId: params.sheetId,
+                type: params.type,
+                recordId: params.recordId
+              };
+            }
+          } catch (formParseError) {
+            Logger.log('ERROR parsing form data: ' + formParseError.toString());
+            return ContentService.createTextOutput(JSON.stringify({ 
+              success: false, 
+              error: 'Failed to parse form data: ' + formParseError.toString() 
+            }))
+              .setMimeType(ContentService.MimeType.JSON);
+          }
         }
       }
     } else {
@@ -79,28 +99,48 @@ function doPost(e) {
       const params = e.parameter || {};
       Logger.log('Form params: ' + JSON.stringify(params));
       
-      try {
-        const dataString = params.data || '';
-        Logger.log('Data string (raw): ' + dataString);
-        const decodedData = decodeURIComponent(dataString);
-        Logger.log('Data string (decoded): ' + decodedData);
-        const parsedData = JSON.parse(decodedData);
-        Logger.log('Data string (parsed): ' + JSON.stringify(parsedData));
-        
+      // Handle clear action (no data field needed)
+      if (params.action === 'clear') {
         data = {
           action: params.action,
-          sheetId: params.sheetId,
-          type: params.type,
-          data: parsedData,
-          recordId: params.recordId
+          sheetId: params.sheetId
         };
-      } catch (formParseError) {
-        Logger.log('ERROR parsing form data: ' + formParseError.toString());
-        return ContentService.createTextOutput(JSON.stringify({ 
-          success: false, 
-          error: 'Failed to parse form data: ' + formParseError.toString() 
-        }))
-          .setMimeType(ContentService.MimeType.JSON);
+        Logger.log('Clear action detected, data: ' + JSON.stringify(data));
+      } else {
+        // Other actions need data field
+        try {
+          const dataString = params.data || '';
+          if (dataString) {
+            Logger.log('Data string (raw): ' + dataString);
+            const decodedData = decodeURIComponent(dataString);
+            Logger.log('Data string (decoded): ' + decodedData);
+            const parsedData = JSON.parse(decodedData);
+            Logger.log('Data string (parsed): ' + JSON.stringify(parsedData));
+            
+            data = {
+              action: params.action,
+              sheetId: params.sheetId,
+              type: params.type,
+              data: parsedData,
+              recordId: params.recordId
+            };
+          } else {
+            // No data field, just action and sheetId
+            data = {
+              action: params.action,
+              sheetId: params.sheetId,
+              type: params.type,
+              recordId: params.recordId
+            };
+          }
+        } catch (formParseError) {
+          Logger.log('ERROR parsing form data: ' + formParseError.toString());
+          return ContentService.createTextOutput(JSON.stringify({ 
+            success: false, 
+            error: 'Failed to parse form data: ' + formParseError.toString() 
+          }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
       }
     }
     
