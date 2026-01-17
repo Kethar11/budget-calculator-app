@@ -129,12 +129,29 @@ function doPost(e) {
       if (!sheet) {
         Logger.log('Sheet not found, creating: ' + sheetName);
         sheet = ss.insertSheet(sheetName);
-        sheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
+        sheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
       }
       
+      // Check if headers exist, if not add them
       if (sheet.getLastRow() === 0) {
         Logger.log('Sheet is empty, adding headers');
-        sheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
+        sheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+      } else {
+        // Check if Currency column exists, if not add it
+        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        if (headers.indexOf('Currency') === -1) {
+          // Add Currency column after Description
+          const descIndex = headers.indexOf('Description');
+          if (descIndex !== -1) {
+            sheet.insertColumnAfter(descIndex + 1);
+            sheet.getRange(1, descIndex + 2).setValue('Currency');
+            // Fill existing rows with default currency
+            const lastRow = sheet.getLastRow();
+            if (lastRow > 1) {
+              sheet.getRange(2, descIndex + 2, lastRow - 1, 1).setValue('EUR');
+            }
+          }
+        }
       }
       
       // Ensure data.data exists
@@ -154,6 +171,7 @@ function doPost(e) {
         data.data.Subcategory || '',
         data.data.Amount || 0,
         data.data.Description || '',
+        data.data.Currency || data.data.entryCurrency || 'EUR',
         data.data['Created At'] || new Date().toISOString()
       ];
       
@@ -179,15 +197,21 @@ function doPost(e) {
       
       for (let i = 1; i < values.length; i++) {
         if (values[i][idIndex] == data.recordId) {
-          sheet.getRange(i + 1, 1, 1, 7).setValues([[
+          const currencyIndex = headers.indexOf('Currency');
+          const numCols = currencyIndex !== -1 ? 8 : 7;
+          const rowData = [
             data.data.ID,
             data.data.Date,
             data.data.Category,
             data.data.Subcategory,
             data.data.Amount,
-            data.data.Description,
-            data.data['Created At']
-          ]]);
+            data.data.Description
+          ];
+          if (currencyIndex !== -1) {
+            rowData.push(data.data.Currency || data.data.entryCurrency || 'EUR');
+          }
+          rowData.push(data.data['Created At']);
+          sheet.getRange(i + 1, 1, 1, numCols).setValues([rowData]);
           return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record updated' }))
             .setMimeType(ContentService.MimeType.JSON);
         }
@@ -230,33 +254,54 @@ function doPost(e) {
       
       if (!incomeSheet) {
         incomeSheet = ss.insertSheet('Income');
-        incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
+        incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
       } else {
         incomeSheet.clear();
-        incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
+        incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
       }
       
       if (data.transactions && data.transactions.length > 0) {
         data.transactions.forEach(t => {
-          incomeSheet.appendRow([t.ID, t.Date, t.Category, t.Subcategory, t.Amount, t.Description, t['Created At']]);
+          incomeSheet.appendRow([t.ID, t.Date, t.Category, t.Subcategory, t.Amount, t.Description, t.Currency || t.entryCurrency || 'EUR', t['Created At']]);
         });
       }
       
       if (!expenseSheet) {
         expenseSheet = ss.insertSheet('Expense');
-        expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
+        expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
       } else {
         expenseSheet.clear();
-        expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
+        expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
       }
       
       if (data.expenses && data.expenses.length > 0) {
         data.expenses.forEach(e => {
-          expenseSheet.appendRow([e.ID, e.Date, e.Category, e.Subcategory, e.Amount, e.Description, e['Created At']]);
+          expenseSheet.appendRow([e.ID, e.Date, e.Category, e.Subcategory, e.Amount, e.Description, e.Currency || e.entryCurrency || 'EUR', e['Created At']]);
         });
       }
       
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'All data synced' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (action === 'clear') {
+      Logger.log('Clearing all sheets');
+      let incomeSheet = ss.getSheetByName('Income');
+      let expenseSheet = ss.getSheetByName('Expense');
+      
+      if (incomeSheet) {
+        incomeSheet.clear();
+        incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+        Logger.log('Income sheet cleared');
+      }
+      
+      if (expenseSheet) {
+        expenseSheet.clear();
+        expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+        Logger.log('Expense sheet cleared');
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'All sheets cleared' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     

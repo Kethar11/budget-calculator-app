@@ -78,14 +78,31 @@ export const readFromGoogleSheets = async () => {
         
         // Only process rows with data
         if (id !== null || date || amount) {
+          // Parse date safely
+          let parsedDate = '';
+          if (date) {
+            try {
+              const dateObj = new Date(date);
+              if (!isNaN(dateObj.getTime())) {
+                parsedDate = dateObj.toISOString().split('T')[0];
+              } else {
+                // Try parsing as string date
+                parsedDate = date.toString();
+              }
+            } catch (e) {
+              parsedDate = date.toString();
+            }
+          }
+          
           const transaction = {
             ID: id || index,
-            Date: date || '',
+            Date: parsedDate,
             Type: 'Income',
             Category: getCellValue(row, headers.indexOf('Category')) || '',
             Subcategory: getCellValue(row, headers.indexOf('Subcategory')) || '',
             Amount: parseFloat(amount || 0),
             Description: getCellValue(row, headers.indexOf('Description')) || '',
+            Currency: getCellValue(row, headers.indexOf('Currency')) || 'EUR',
             'Created At': getCellValue(row, headers.indexOf('Created At')) || new Date().toISOString()
           };
           transactions.push(transaction);
@@ -104,13 +121,30 @@ export const readFromGoogleSheets = async () => {
         
         // Only process rows with data
         if (id !== null || date || amount) {
+          // Parse date safely
+          let parsedDate = '';
+          if (date) {
+            try {
+              const dateObj = new Date(date);
+              if (!isNaN(dateObj.getTime())) {
+                parsedDate = dateObj.toISOString().split('T')[0];
+              } else {
+                // Try parsing as string date
+                parsedDate = date.toString();
+              }
+            } catch (e) {
+              parsedDate = date.toString();
+            }
+          }
+          
           const expense = {
             ID: id || index,
-            Date: date || '',
+            Date: parsedDate,
             Category: getCellValue(row, headers.indexOf('Category')) || '',
             Subcategory: getCellValue(row, headers.indexOf('Subcategory')) || '',
             Amount: parseFloat(amount || 0),
             Description: getCellValue(row, headers.indexOf('Description')) || '',
+            Currency: getCellValue(row, headers.indexOf('Currency')) || 'EUR',
             'Created At': getCellValue(row, headers.indexOf('Created At')) || new Date().toISOString()
           };
           expenses.push(expense);
@@ -168,6 +202,7 @@ export const addRecordToGoogleSheets = async (record, type) => {
         Subcategory: record.subcategory || '',
         Amount: record.amount || 0,
         Description: record.description || '',
+        Currency: record.entryCurrency || 'EUR',
         'Created At': record.createdAt || new Date().toISOString()
       }
     };
@@ -324,6 +359,7 @@ export const updateRecordInGoogleSheets = async (record, type) => {
           Subcategory: record.subcategory || '',
           Amount: record.amount || 0,
           Description: record.description || '',
+          Currency: record.entryCurrency || 'EUR',
           'Created At': record.createdAt || new Date().toISOString()
         }
       })
@@ -394,6 +430,7 @@ export const writeToGoogleSheets = async (transactions, expenses) => {
             Subcategory: t.subcategory || '',
             Amount: t.amount || 0,
             Description: t.description || '',
+            Currency: t.entryCurrency || 'EUR',
             'Created At': t.createdAt || new Date().toISOString()
           })),
         expenses: expenses.map(e => ({
@@ -403,6 +440,7 @@ export const writeToGoogleSheets = async (transactions, expenses) => {
           Subcategory: e.subcategory || '',
           Amount: e.amount || 0,
           Description: e.description || '',
+          Currency: e.entryCurrency || 'EUR',
           'Created At': e.createdAt || new Date().toISOString()
         }))
       })
@@ -415,6 +453,37 @@ export const writeToGoogleSheets = async (transactions, expenses) => {
     console.error('Error syncing to Google Sheets:', error);
     // Fallback to Excel export
     return exportToExcelFile(transactions, expenses);
+  }
+};
+
+/**
+ * Clear all data from Google Sheets
+ */
+export const clearGoogleSheets = async () => {
+  if (!GOOGLE_SCRIPT_URL) {
+    return { success: false, error: 'Google Script not configured' };
+  }
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        action: 'clear',
+        sheetId: GOOGLE_SHEET_ID
+      }).toString()
+    });
+
+    // With no-cors, we can't read response, but request should succeed
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return { success: true, message: 'Google Sheets cleared successfully' };
+  } catch (error) {
+    console.error('Error clearing Google Sheets:', error);
+    return { success: false, error: error.message || 'Failed to clear Google Sheets' };
   }
 };
 

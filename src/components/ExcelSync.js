@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Upload, CheckCircle, AlertCircle, X, Trash2, Database } from 'lucide-react';
 import { db } from '../utils/database';
-import { readFromGoogleSheets, writeToGoogleSheets } from '../utils/googleSheetsDirect';
+import { readFromGoogleSheets, writeToGoogleSheets, clearGoogleSheets } from '../utils/googleSheetsDirect';
 import './ExcelSync.css';
 
 const ExcelSync = ({ onDataFetched }) => {
@@ -38,6 +38,7 @@ const ExcelSync = ({ onDataFetched }) => {
                 description: t.Description || '',
                 date: t.Date || t['Created At'] || new Date().toISOString(),
                 createdAt: t['Created At'] || new Date().toISOString(),
+                entryCurrency: t.Currency || 'EUR',
                 files: []
               });
               imported++;
@@ -64,6 +65,7 @@ const ExcelSync = ({ onDataFetched }) => {
                 description: e.Description || '',
                 date: e.Date || e['Created At'] || new Date().toISOString(),
                 createdAt: e['Created At'] || new Date().toISOString(),
+                entryCurrency: e.Currency || 'EUR',
                 files: []
               });
               imported++;
@@ -257,17 +259,54 @@ const ExcelSync = ({ onDataFetched }) => {
       return;
     }
 
-    if (!window.confirm('⚠️ WARNING: To clear Google Sheets, please open the sheet and delete rows manually. This button cannot clear Google Sheets directly. Continue to open the sheet?')) {
+    if (!window.confirm('⚠️ WARNING: This will delete ALL data from Google Sheets AND local storage! This cannot be undone. Are you absolutely sure?')) {
       return;
     }
 
-    // Open Google Sheets for manual clearing
-    window.open('https://docs.google.com/spreadsheets/d/1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0/edit', '_blank');
+    if (!window.confirm('⚠️ LAST WARNING: All data will be permanently deleted. Continue?')) {
+      return;
+    }
+
+    setSyncing(true);
     setStatus({ 
       type: 'info', 
-      message: 'Google Sheets opened. Please delete rows manually to clear data.' 
+      message: 'Clearing Google Sheets and local data...' 
     });
-    setTimeout(() => setStatus(null), 5000);
+
+    try {
+      // Clear Google Sheets
+      const clearResult = await clearGoogleSheets();
+      
+      if (!clearResult.success) {
+        throw new Error(clearResult.error || 'Failed to clear Google Sheets');
+      }
+
+      // Clear local data
+      await db.transactions.clear();
+      await db.expenses.clear();
+      await db.savings.clear();
+      await db.files.clear();
+
+      setStatus({ 
+        type: 'success', 
+        message: '✅ Google Sheets and local data cleared successfully! Page will reload...' 
+      });
+
+      window.dispatchEvent(new Event('dataChanged'));
+      
+      // Reload page after 2 seconds
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      setStatus({ 
+        type: 'error', 
+        message: 'Failed to clear: ' + error.message 
+      });
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
