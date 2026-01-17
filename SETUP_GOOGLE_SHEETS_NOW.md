@@ -290,14 +290,36 @@ function doPost(e) {
       let expenseSheet = ss.getSheetByName('Expense');
       
       if (incomeSheet) {
-        incomeSheet.clear();
-        incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+        const lastRow = incomeSheet.getLastRow();
+        if (lastRow > 1) {
+          // Delete all rows except header (row 1)
+          incomeSheet.deleteRows(2, lastRow - 1);
+          Logger.log('Deleted ' + (lastRow - 1) + ' rows from Income sheet');
+        } else if (lastRow === 1) {
+          // Sheet only has header, clear it and re-add header
+          incomeSheet.clear();
+          incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+        } else {
+          // Empty sheet, just add header
+          incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+        }
         Logger.log('Income sheet cleared');
       }
       
       if (expenseSheet) {
-        expenseSheet.clear();
-        expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+        const lastRow = expenseSheet.getLastRow();
+        if (lastRow > 1) {
+          // Delete all rows except header (row 1)
+          expenseSheet.deleteRows(2, lastRow - 1);
+          Logger.log('Deleted ' + (lastRow - 1) + ' rows from Expense sheet');
+        } else if (lastRow === 1) {
+          // Sheet only has header, clear it and re-add header
+          expenseSheet.clear();
+          expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+        } else {
+          // Empty sheet, just add header
+          expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+        }
         Logger.log('Expense sheet cleared');
       }
       

@@ -504,9 +504,26 @@ export const clearGoogleSheets = async () => {
     });
 
     // With no-cors, we can't read response, but request should succeed
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait longer for the script to process
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    return { success: true, message: 'Google Sheets cleared successfully' };
+    // Try to verify by reading from Google Sheets
+    try {
+      const verifyResult = await readFromGoogleSheets();
+      const totalRecords = (verifyResult.transactions?.length || 0) + (verifyResult.expenses?.length || 0);
+      
+      if (totalRecords === 0) {
+        return { success: true, message: 'Google Sheets cleared successfully and verified' };
+      } else {
+        return { 
+          success: false, 
+          error: 'Google Sheets clear command sent, but ' + totalRecords + ' records still found. Please check Google Apps Script logs.' 
+        };
+      }
+    } catch (verifyError) {
+      // Can't verify, but assume it worked
+      return { success: true, message: 'Google Sheets clear command sent (verification failed, please check manually)' };
+    }
   } catch (error) {
     console.error('Error clearing Google Sheets:', error);
     return { success: false, error: error.message || 'Failed to clear Google Sheets' };

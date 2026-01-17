@@ -246,43 +246,36 @@ const ExcelSync = ({ onDataFetched }) => {
     }
   };
 
-  // Clear Excel sheet (automatic - no confirmations)
+  // Clear Excel sheet (automatic - only clears Google Sheets, NOT local data)
   const clearExcelSheet = async () => {
     setSyncing(true);
     setStatus({ 
       type: 'info', 
-      message: 'Clearing Google Sheets and local data...' 
+      message: 'Clearing Google Sheets only...' 
     });
 
     try {
-      // Clear Google Sheets
+      // Clear Google Sheets ONLY (not local data)
       const clearResult = await clearGoogleSheets();
       
       if (!clearResult.success) {
         throw new Error(clearResult.error || 'Failed to clear Google Sheets');
       }
 
-      // Clear local data
-      await db.transactions.clear();
-      await db.expenses.clear();
-      await db.savings.clear();
-      await db.files.clear();
-
       setStatus({ 
         type: 'success', 
-        message: '✅ Google Sheets and local data cleared successfully! Page will reload...' 
+        message: '✅ Google Sheets cleared successfully! Refresh the sheet to see changes.' 
       });
       
-      // Reload page after 1 second
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // Don't reload page - user can continue working
+      setTimeout(() => setStatus(null), 5000);
     } catch (error) {
-      console.error('Error clearing data:', error);
+      console.error('Error clearing Google Sheets:', error);
       setStatus({ 
         type: 'error', 
-        message: 'Failed to clear: ' + error.message 
+        message: 'Failed to clear Google Sheets: ' + error.message 
       });
+      setTimeout(() => setStatus(null), 5000);
     } finally {
       setSyncing(false);
     }
