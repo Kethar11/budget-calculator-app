@@ -146,12 +146,13 @@ function doPost(e) {
     
     // Log for debugging (check Executions in Apps Script)
     Logger.log('Received data: ' + JSON.stringify(data));
-    Logger.log('Action: ' + action);
-    Logger.log('Type: ' + data.type);
-    Logger.log('Sheet ID: ' + data.sheetId);
     
     const sheetId = data.sheetId;
     const action = data.action;
+    
+    Logger.log('Action: ' + action);
+    Logger.log('Type: ' + (data.type || 'N/A'));
+    Logger.log('Sheet ID: ' + sheetId);
     
     if (!sheetId || !action) {
       Logger.log('ERROR: Missing sheetId or action');
@@ -339,12 +340,25 @@ function doPost(e) {
           const lastRow = incomeSheet.getLastRow();
           Logger.log('Income sheet last row: ' + lastRow);
           
-          // Clear entire sheet and re-add header (most reliable method)
-          incomeSheet.clear();
+          // Delete ALL rows including header, then re-add header
+          if (lastRow > 0) {
+            incomeSheet.deleteRows(1, lastRow);
+            Logger.log('Deleted all ' + lastRow + ' rows from Income sheet');
+          }
+          
+          // Re-add header
           incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
-          Logger.log('Income sheet cleared successfully');
+          Logger.log('Income sheet cleared successfully - header re-added');
         } catch (error) {
           Logger.log('ERROR clearing Income sheet: ' + error.toString());
+          // Try alternative method
+          try {
+            incomeSheet.clear();
+            incomeSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+            Logger.log('Income sheet cleared using alternative method');
+          } catch (error2) {
+            Logger.log('ERROR with alternative method: ' + error2.toString());
+          }
         }
       }
       
@@ -353,12 +367,25 @@ function doPost(e) {
           const lastRow = expenseSheet.getLastRow();
           Logger.log('Expense sheet last row: ' + lastRow);
           
-          // Clear entire sheet and re-add header (most reliable method)
-          expenseSheet.clear();
+          // Delete ALL rows including header, then re-add header
+          if (lastRow > 0) {
+            expenseSheet.deleteRows(1, lastRow);
+            Logger.log('Deleted all ' + lastRow + ' rows from Expense sheet');
+          }
+          
+          // Re-add header
           expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
-          Logger.log('Expense sheet cleared successfully');
+          Logger.log('Expense sheet cleared successfully - header re-added');
         } catch (error) {
           Logger.log('ERROR clearing Expense sheet: ' + error.toString());
+          // Try alternative method
+          try {
+            expenseSheet.clear();
+            expenseSheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Currency', 'Created At']);
+            Logger.log('Expense sheet cleared using alternative method');
+          } catch (error2) {
+            Logger.log('ERROR with alternative method: ' + error2.toString());
+          }
         }
       }
       
