@@ -98,61 +98,18 @@ const ExcelSync = ({ onDataFetched }) => {
     }
   };
 
-  // Update Google Sheets with current data (direct API - no backend!)
+  // Update Excel - Refresh page to sync with Google Sheets
   const updateExcel = async () => {
     setSyncing(true);
-    setStatus(null);
+    setStatus({ 
+      type: 'info', 
+      message: 'Refreshing data from Google Sheets...' 
+    });
     
-    try {
-      // Get all data from IndexedDB
-      const transactions = await db.transactions.toArray();
-      const expenses = await db.expenses.toArray();
-      
-      if (transactions.length === 0 && expenses.length === 0) {
-        setStatus({ 
-          type: 'error', 
-          message: 'No data to save! Please add some income or expense transactions first.' 
-        });
-        setSyncing(false);
-        return;
-      }
-      
-      // Write to Google Sheets directly (no backend!)
-      const result = await writeToGoogleSheets(transactions, expenses);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to update Google Sheets');
-      }
-      
-      const incomeCount = transactions.filter(t => t.type === 'income').length;
-      const expenseCount = expenses.length;
-      const totalRecords = incomeCount + expenseCount;
-      
-      // Check if it's Excel export or direct write
-      if (result.message && result.message.includes('downloaded')) {
-        setStatus({ 
-          type: 'success', 
-          message: `✅ ${result.message} Upload this file to your Google Sheet manually.` 
-        });
-      } else {
-        setStatus({ 
-          type: 'success', 
-          message: `✅ Data saved to Google Sheets! ${totalRecords} records (${incomeCount} income, ${expenseCount} expenses)` 
-        });
-      }
-      window.dispatchEvent(new Event('dataChanged'));
-      
-      // Auto-hide success message after 3 seconds
-      setTimeout(() => setStatus(null), 3000);
-    } catch (error) {
-      console.error('Error updating Google Sheets:', error);
-      setStatus({ 
-        type: 'error', 
-        message: error.message || 'Failed to update Google Sheets. Excel file will be downloaded instead - you can upload it manually.' 
-      });
-    } finally {
-      setSyncing(false);
-    }
+    // Simply refresh the page to get latest data from Google Sheets
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
 
   // Clear Excel sheet (automatic - clears Google Sheets and refreshes page)
