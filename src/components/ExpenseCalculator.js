@@ -107,6 +107,9 @@ const ExpenseCalculator = () => {
       return;
     }
 
+    // Set loading state
+    setLoading(true);
+
     try {
       // Combine date and time into ISO string
       // Safely parse date and time
@@ -199,7 +202,10 @@ const ExpenseCalculator = () => {
         if (!error.message || !error.message.includes('not configured')) {
           alert('Failed to save to Google Sheets: ' + (error.message || 'Unknown error'));
         }
+        setLoading(false);
         return;
+      } finally {
+        setLoading(false);
       }
       
       // Trigger header stats update
