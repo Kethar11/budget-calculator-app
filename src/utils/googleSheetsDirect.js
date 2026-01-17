@@ -10,6 +10,45 @@
 const GOOGLE_SHEET_ID = '1Dp4UGkT8h-PHnEXDPbGqnnDxsvhP6zO_UvxXH4xXLu0';
 
 /**
+ * Safely parse date to ISO string format
+ * Returns empty string if date is invalid
+ */
+const safeDateToISO = (dateValue) => {
+  if (!dateValue) return '';
+  
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+      // Invalid date, return empty string
+      return '';
+    }
+    return date.toISOString().split('T')[0];
+  } catch (error) {
+    console.warn('Invalid date value:', dateValue, error);
+    return '';
+  }
+};
+
+/**
+ * Safely parse date to full ISO string
+ * Returns current date if invalid
+ */
+const safeDateToFullISO = (dateValue) => {
+  if (!dateValue) return new Date().toISOString();
+  
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+      return new Date().toISOString();
+    }
+    return date.toISOString();
+  } catch (error) {
+    console.warn('Invalid date value:', dateValue, error);
+    return new Date().toISOString();
+  }
+};
+
+/**
  * Read from Google Sheets using public API
  * For public sheets, we can read without authentication
  */
@@ -197,13 +236,13 @@ export const addRecordToGoogleSheets = async (record, type) => {
       type: type, // 'income' or 'expense'
       data: {
         ID: record.id,
-        Date: record.date ? new Date(record.date).toISOString().split('T')[0] : '',
+        Date: safeDateToISO(record.date),
         Category: record.category || '',
         Subcategory: record.subcategory || '',
         Amount: record.amount || 0,
         Description: record.description || '',
         Currency: record.entryCurrency || 'EUR',
-        'Created At': record.createdAt || new Date().toISOString()
+        'Created At': safeDateToFullISO(record.createdAt)
       }
     };
     
@@ -360,7 +399,7 @@ export const updateRecordInGoogleSheets = async (record, type) => {
           Amount: record.amount || 0,
           Description: record.description || '',
           Currency: record.entryCurrency || 'EUR',
-          'Created At': record.createdAt || new Date().toISOString()
+          'Created At': safeDateToFullISO(record.createdAt)
         }
       })
     });
@@ -425,23 +464,23 @@ export const writeToGoogleSheets = async (transactions, expenses) => {
           .filter(t => t.type === 'income')
           .map(t => ({
             ID: t.id,
-            Date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
+            Date: safeDateToISO(t.date),
             Category: t.category || '',
             Subcategory: t.subcategory || '',
             Amount: t.amount || 0,
             Description: t.description || '',
             Currency: t.entryCurrency || 'EUR',
-            'Created At': t.createdAt || new Date().toISOString()
+            'Created At': safeDateToFullISO(t.createdAt)
           })),
         expenses: expenses.map(e => ({
           ID: e.id,
-          Date: e.date ? new Date(e.date).toISOString().split('T')[0] : '',
+          Date: safeDateToISO(e.date),
           Category: e.category || '',
           Subcategory: e.subcategory || '',
           Amount: e.amount || 0,
           Description: e.description || '',
           Currency: e.entryCurrency || 'EUR',
-          'Created At': e.createdAt || new Date().toISOString()
+          'Created At': safeDateToFullISO(e.createdAt)
         }))
       })
     });
@@ -499,22 +538,24 @@ const exportToExcelFile = (transactions, expenses) => {
     .filter(t => t.type === 'income')
     .map(t => ({
       ID: t.id,
-      Date: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
+      Date: safeDateToISO(t.date),
       Category: t.category || '',
       Subcategory: t.subcategory || '',
       Amount: t.amount || 0,
       Description: t.description || '',
-      'Created At': t.createdAt || new Date().toISOString()
+      Currency: t.entryCurrency || 'EUR',
+      'Created At': safeDateToFullISO(t.createdAt)
     }));
   
   const expenseData = expenses.map(e => ({
     ID: e.id,
-    Date: e.date ? new Date(e.date).toISOString().split('T')[0] : '',
+    Date: safeDateToISO(e.date),
     Category: e.category || '',
     Subcategory: e.subcategory || '',
     Amount: e.amount || 0,
     Description: e.description || '',
-    'Created At': e.createdAt || new Date().toISOString()
+    Currency: e.entryCurrency || 'EUR',
+    'Created At': safeDateToFullISO(e.createdAt)
   }));
   
     if (incomeData.length > 0) {

@@ -109,6 +109,17 @@ function AppContent({ onLogout }) {
       };
     };
     
+    // Debounce function to prevent too many rapid calls
+    let statsTimeout = null;
+    const debouncedLoadStats = () => {
+      if (statsTimeout) {
+        clearTimeout(statsTimeout);
+      }
+      statsTimeout = setTimeout(() => {
+        loadRealTimeStats();
+      }, 300); // Wait 300ms after last call
+    };
+
     const loadRealTimeStats = async () => {
       try {
         // Load transactions (all-time)
@@ -137,13 +148,15 @@ function AppContent({ onLogout }) {
         // Combine expenses from both transactions and expenses table
         const combinedTotalExpenses = totalExpenses + totalExpenseAmount;
 
-        console.log('📊 Header Stats Calculation:', {
-          transactionsExpenses: totalExpenses,
-          expensesTable: totalExpenseAmount,
-          combined: combinedTotalExpenses,
-          expenseRecordsCount: expenseRecords.length,
-          expenseRecords: expenseRecords.map(e => ({ id: e.id, amount: e.amount, category: e.category }))
-        });
+        // Only log in development mode to reduce console spam
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📊 Header Stats Calculation:', {
+            transactionsExpenses: totalExpenses,
+            expensesTable: totalExpenseAmount,
+            combined: combinedTotalExpenses,
+            expenseRecordsCount: expenseRecords.length
+          });
+        }
 
         setRealTimeStats({
           totalBalance: totalIncome - combinedTotalExpenses,
@@ -159,35 +172,31 @@ function AppContent({ onLogout }) {
 
     // Initialize storage first
     initStorage().then(() => {
-      // Load stats after data is restored (with multiple attempts to ensure data is loaded)
+      // Load stats once after data is restored
       setTimeout(() => {
         loadRealTimeStats();
-      }, 500);
-      setTimeout(() => {
-        loadRealTimeStats();
-      }, 1500);
-      setTimeout(() => {
-        loadRealTimeStats();
-      }, 3000);
+      }, 1000);
     });
     
-    // Also load stats immediately (in case data is already loaded)
+    // Load stats once on mount (in case data is already loaded)
     loadRealTimeStats();
     
     // Update stats only when tab becomes visible (reduced CPU usage)
-    // Remove frequent polling - stats update only on data changes or tab focus
     const handleFocus = () => {
-      loadRealTimeStats();
+      debouncedLoadStats();
     };
     window.addEventListener('focus', handleFocus);
     
-    // Listen for data changes to refresh stats
+    // Listen for data changes to refresh stats (debounced)
     const handleDataChange = () => {
-      loadRealTimeStats();
+      debouncedLoadStats();
     };
     window.addEventListener('dataChanged', handleDataChange);
     
     return () => {
+      if (statsTimeout) {
+        clearTimeout(statsTimeout);
+      }
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('dataChanged', handleDataChange);
     };
