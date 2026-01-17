@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Upload, CheckCircle, AlertCircle, X, Trash2, Database } from 'lucide-react';
-import { db } from '../utils/database';
+import { Download, Upload, CheckCircle, AlertCircle, X, Trash2 } from 'lucide-react';
 import { readFromGoogleSheets, writeToGoogleSheets, clearGoogleSheets } from '../utils/googleSheetsDirect';
 import './ExcelSync.css';
 
@@ -22,60 +21,8 @@ const ExcelSync = ({ onDataFetched }) => {
         throw new Error(data.error || 'Failed to fetch from Google Sheets');
       }
       
-      // Import transactions from Google Sheets
-      if (data.transactions && Array.isArray(data.transactions)) {
-        let imported = 0;
-        for (const t of data.transactions) {
-          try {
-            const existing = await db.transactions.get(t.ID);
-            if (!existing) {
-              await db.transactions.add({
-                id: t.ID,
-                type: (t.Type || 'expense').toLowerCase(),
-                category: t.Category || '',
-                subcategory: t.Subcategory || '',
-                amount: parseFloat(t.Amount) || 0,
-                description: t.Description || '',
-                date: t.Date || t['Created At'] || new Date().toISOString(),
-                createdAt: t['Created At'] || new Date().toISOString(),
-                entryCurrency: t.Currency || 'EUR',
-                files: []
-              });
-              imported++;
-            }
-          } catch (error) {
-            console.error('Error importing transaction:', error);
-          }
-        }
-        console.log(`✅ Imported ${imported} transactions from Google Sheets`);
-      }
-
-      // Import expenses from Google Sheets
-      if (data.expenses && Array.isArray(data.expenses)) {
-        let imported = 0;
-        for (const e of data.expenses) {
-          try {
-            const existing = await db.expenses.get(e.ID);
-            if (!existing) {
-              await db.expenses.add({
-                id: e.ID,
-                category: e.Category || '',
-                subcategory: e.Subcategory || '',
-                amount: parseFloat(e.Amount) || 0,
-                description: e.Description || '',
-                date: e.Date || e['Created At'] || new Date().toISOString(),
-                createdAt: e['Created At'] || new Date().toISOString(),
-                entryCurrency: e.Currency || 'EUR',
-                files: []
-              });
-              imported++;
-            }
-          } catch (error) {
-            console.error('Error importing expense:', error);
-          }
-        }
-        console.log(`✅ Imported ${imported} expenses from Google Sheets`);
-      }
+      // No longer storing in IndexedDB - data is fetched directly from Google Sheets when needed
+      // Just trigger a page reload to fetch fresh data
 
       const transactionCount = data.transactions?.length || 0;
       const expenseCount = data.expenses?.length || 0;
@@ -133,12 +80,10 @@ const ExcelSync = ({ onDataFetched }) => {
           }, 500);
         }
       }
-      window.dispatchEvent(new Event('dataChanged'));
-      
-      // Reload page data after a short delay
+      // Reload page to fetch fresh data from Google Sheets
       setTimeout(() => {
         window.location.reload();
-      }, 2000);
+      }, 1500);
       
       // Auto-hide success message after 5 seconds
       setTimeout(() => setStatus(null), 5000);
@@ -210,43 +155,7 @@ const ExcelSync = ({ onDataFetched }) => {
     }
   };
 
-  // Removed Google Sheets sync - simplified to only Excel
-
-  // Clear all local data (IndexedDB)
-  const clearLocalData = async () => {
-    if (!window.confirm('⚠️ WARNING: This will delete ALL local data (IndexedDB)! This cannot be undone. Are you absolutely sure?')) {
-      return;
-    }
-    
-    if (!window.confirm('⚠️ This is your LAST WARNING! All local data will be permanently deleted. Continue?')) {
-      return;
-    }
-
-    try {
-      // Clear all IndexedDB tables
-      await db.transactions.clear();
-      await db.expenses.clear();
-      await db.savings.clear();
-      await db.files.clear();
-      
-      setStatus({ 
-        type: 'success', 
-        message: 'Local data cleared successfully! Page will reload...' 
-      });
-      
-      window.dispatchEvent(new Event('dataChanged'));
-      
-      // Reload page after 2 seconds
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-    } catch (error) {
-      console.error('Error clearing local data:', error);
-      setStatus({ type: 'error', message: 'Failed to clear local data.' });
-    }
-  };
-
-  // Clear Excel sheet (automatic - only clears Google Sheets, NOT local data)
+  // Clear Excel sheet (automatic - clears Google Sheets and refreshes page)
   const clearExcelSheet = async () => {
     setSyncing(true);
     setStatus({ 
@@ -264,11 +173,13 @@ const ExcelSync = ({ onDataFetched }) => {
 
       setStatus({ 
         type: 'success', 
-        message: '✅ Google Sheets cleared successfully! Refresh the sheet to see changes.' 
+        message: '✅ Google Sheets cleared successfully! Refreshing page to get latest data...' 
       });
       
-      // Don't reload page - user can continue working
-      setTimeout(() => setStatus(null), 5000);
+      // Refresh page to get latest data from Google Sheets (which should be empty now)
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error('Error clearing Google Sheets:', error);
       setStatus({ 
@@ -303,17 +214,6 @@ const ExcelSync = ({ onDataFetched }) => {
         {syncing ? 'Updating...' : 'Update Excel'}
       </button>
       
-      <button
-        className="excel-sync-btn-header clear-local-btn"
-        onClick={clearLocalData}
-        disabled={syncing}
-        title="Clear all local data (IndexedDB) - WARNING: This cannot be undone!"
-        style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white' }}
-      >
-        <Database size={18} />
-        Clear Local
-      </button>
-
       <button
         className="excel-sync-btn-header clear-excel-btn"
         onClick={clearExcelSheet}
