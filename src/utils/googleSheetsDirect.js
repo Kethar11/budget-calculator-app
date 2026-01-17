@@ -331,19 +331,6 @@ export const addRecordToGoogleSheets = async (record, type) => {
         };
       }
     }
-
-    console.log('Response status:', response.status);
-    console.log('Response ok:', response.ok);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Response error text:', errorText);
-      throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to add record'}`);
-    }
-    
-    const result = await response.json();
-    console.log('Success response:', result);
-    return { success: true, message: result.message || 'Record added to Google Sheets' };
   } catch (error) {
     console.error('Error adding record to Google Sheets:', error);
     console.error('Error details:', {
