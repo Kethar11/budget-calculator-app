@@ -11,6 +11,17 @@ const ExcelSync = ({ onDataFetched }) => {
 
   // Fetch data from Google Sheets (direct API - no backend!)
   const fetchFromExcel = async () => {
+    // Ask for password
+    const password = window.prompt('⚠️ Enter password to fetch from Google Sheets:');
+    if (password !== '780788') {
+      setStatus({ 
+        type: 'error', 
+        message: 'Incorrect password. Access denied.' 
+      });
+      setTimeout(() => setStatus(null), 3000);
+      return;
+    }
+
     setSyncing(true);
     setStatus(null);
     
@@ -100,6 +111,17 @@ const ExcelSync = ({ onDataFetched }) => {
 
   // Update Excel - Refresh page to sync with Google Sheets
   const updateExcel = async () => {
+    // Ask for password
+    const password = window.prompt('⚠️ Enter password to update Google Sheets:');
+    if (password !== '780788') {
+      setStatus({ 
+        type: 'error', 
+        message: 'Incorrect password. Access denied.' 
+      });
+      setTimeout(() => setStatus(null), 3000);
+      return;
+    }
+
     setSyncing(true);
     setStatus({ 
       type: 'info', 
@@ -114,6 +136,17 @@ const ExcelSync = ({ onDataFetched }) => {
 
   // Clear Excel sheet (automatic - clears Google Sheets and refreshes page)
   const clearExcelSheet = async () => {
+    // Ask for password
+    const password = window.prompt('⚠️ Enter password to clear Google Sheets:');
+    if (password !== '780788') {
+      setStatus({ 
+        type: 'error', 
+        message: 'Incorrect password. Access denied.' 
+      });
+      setTimeout(() => setStatus(null), 3000);
+      return;
+    }
+
     setSyncing(true);
     setStatus({ 
       type: 'info', 
