@@ -29,61 +29,123 @@ function doOptions(e) {
 
 function doPost(e) {
   try {
+    Logger.log('=== doPost called ===');
+    Logger.log('e.postData exists: ' + (e.postData ? 'yes' : 'no'));
+    Logger.log('e.parameter exists: ' + (e.parameter ? 'yes' : 'no'));
+    
     // Handle both JSON and form data (for CORS bypass)
     let data;
     
     // Check if it's JSON (from postData.contents)
     if (e.postData && e.postData.contents) {
       try {
+        Logger.log('Attempting to parse as JSON...');
         const jsonData = JSON.parse(e.postData.contents);
         data = jsonData;
+        Logger.log('Successfully parsed as JSON');
       } catch (parseError) {
         // Not JSON, try form data
+        Logger.log('JSON parse failed, trying form data. Error: ' + parseError.toString());
         const params = e.parameter || {};
+        Logger.log('Form params: ' + JSON.stringify(params));
+        
+        try {
+          const dataString = params.data || '';
+          Logger.log('Data string (raw): ' + dataString);
+          const decodedData = decodeURIComponent(dataString);
+          Logger.log('Data string (decoded): ' + decodedData);
+          const parsedData = JSON.parse(decodedData);
+          Logger.log('Data string (parsed): ' + JSON.stringify(parsedData));
+          
+          data = {
+            action: params.action,
+            sheetId: params.sheetId,
+            type: params.type,
+            data: parsedData,
+            recordId: params.recordId
+          };
+        } catch (formParseError) {
+          Logger.log('ERROR parsing form data: ' + formParseError.toString());
+          return ContentService.createTextOutput(JSON.stringify({ 
+            success: false, 
+            error: 'Failed to parse form data: ' + formParseError.toString() 
+          }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+    } else {
+      // Form data only (from e.parameter)
+      Logger.log('No postData.contents, using e.parameter only');
+      const params = e.parameter || {};
+      Logger.log('Form params: ' + JSON.stringify(params));
+      
+      try {
+        const dataString = params.data || '';
+        Logger.log('Data string (raw): ' + dataString);
+        const decodedData = decodeURIComponent(dataString);
+        Logger.log('Data string (decoded): ' + decodedData);
+        const parsedData = JSON.parse(decodedData);
+        Logger.log('Data string (parsed): ' + JSON.stringify(parsedData));
+        
         data = {
           action: params.action,
           sheetId: params.sheetId,
           type: params.type,
-          data: params.data ? JSON.parse(decodeURIComponent(params.data)) : {},
+          data: parsedData,
           recordId: params.recordId
         };
+      } catch (formParseError) {
+        Logger.log('ERROR parsing form data: ' + formParseError.toString());
+        return ContentService.createTextOutput(JSON.stringify({ 
+          success: false, 
+          error: 'Failed to parse form data: ' + formParseError.toString() 
+        }))
+          .setMimeType(ContentService.MimeType.JSON);
       }
-    } else {
-      // Form data only (from e.parameter)
-      const params = e.parameter || {};
-      data = {
-        action: params.action,
-        sheetId: params.sheetId,
-        type: params.type,
-        data: params.data ? JSON.parse(decodeURIComponent(params.data)) : {},
-        recordId: params.recordId
-      };
     }
     
     // Log for debugging (check Executions in Apps Script)
-    console.log('Received data:', JSON.stringify(data));
+    Logger.log('Received data: ' + JSON.stringify(data));
+    Logger.log('Action: ' + action);
+    Logger.log('Type: ' + data.type);
+    Logger.log('Sheet ID: ' + data.sheetId);
     
     const sheetId = data.sheetId;
     const action = data.action;
     
+    if (!sheetId || !action) {
+      Logger.log('ERROR: Missing sheetId or action');
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Missing sheetId or action' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
     const ss = SpreadsheetApp.openById(sheetId);
     
     if (action === 'add') {
-      let sheet = ss.getSheetByName(data.type === 'income' ? 'Income' : 'Expense');
+      const sheetName = data.type === 'income' ? 'Income' : 'Expense';
+      Logger.log('Looking for sheet: ' + sheetName);
+      
+      let sheet = ss.getSheetByName(sheetName);
       if (!sheet) {
-        sheet = ss.insertSheet(data.type === 'income' ? 'Income' : 'Expense');
+        Logger.log('Sheet not found, creating: ' + sheetName);
+        sheet = ss.insertSheet(sheetName);
         sheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
       }
       
       if (sheet.getLastRow() === 0) {
+        Logger.log('Sheet is empty, adding headers');
         sheet.appendRow(['ID', 'Date', 'Category', 'Subcategory', 'Amount', 'Description', 'Created At']);
       }
       
       // Ensure data.data exists
       if (!data.data) {
+        Logger.log('ERROR: No data.data provided');
+        Logger.log('Full data object: ' + JSON.stringify(data));
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'No data provided' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
+      
+      Logger.log('Data to add: ' + JSON.stringify(data.data));
       
       const rowData = [
         data.data.ID || '',
@@ -95,9 +157,9 @@ function doPost(e) {
         data.data['Created At'] || new Date().toISOString()
       ];
       
-      console.log('Adding row:', rowData);
+      Logger.log('Adding row: ' + JSON.stringify(rowData));
       sheet.appendRow(rowData);
-      console.log('Row added successfully');
+      Logger.log('Row added successfully at row: ' + sheet.getLastRow());
       
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Record added' }))
         .setMimeType(ContentService.MimeType.JSON);

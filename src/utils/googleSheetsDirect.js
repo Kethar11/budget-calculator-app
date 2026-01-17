@@ -212,22 +212,49 @@ export const addRecordToGoogleSheets = async (record, type) => {
       });
       
       // With no-cors, we can't read response, but request should succeed
-      // Wait a moment for the script to process, then verify by fetching
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait longer for the script to process (Google Apps Script can be slow)
+      console.log('Waiting for Google Apps Script to process...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Try to verify by reading back from Google Sheets
+      console.log('Verifying record was added...');
       try {
         const verifyResult = await readFromGoogleSheets();
-        const foundRecord = verifyResult.expenses.find(e => e.ID == requestBody.data.ID) || 
-                           verifyResult.transactions.find(t => t.ID == requestBody.data.ID);
+        console.log('Verification result:', {
+          expensesCount: verifyResult.expenses?.length || 0,
+          transactionsCount: verifyResult.transactions?.length || 0,
+          lookingForId: requestBody.data.ID
+        });
+        
+        const foundRecord = verifyResult.expenses?.find(e => e.ID == requestBody.data.ID) || 
+                           verifyResult.transactions?.find(t => t.ID == requestBody.data.ID);
+        
         if (foundRecord) {
+          console.log('✅ Verification successful - record found in Google Sheets');
           return { success: true, message: 'Record added to Google Sheets and verified' };
         } else {
-          return { success: false, error: 'Record sent but not found in Google Sheets. Please check your script.' };
+          console.error('❌ Verification failed - record not found in Google Sheets');
+          console.error('Available IDs:', {
+            expenses: verifyResult.expenses?.map(e => e.ID) || [],
+            transactions: verifyResult.transactions?.map(t => t.ID) || []
+          });
+          return { 
+            success: false, 
+            error: 'Record sent but not found in Google Sheets after verification.\n\n' +
+              'Please check:\n' +
+              '1. Google Apps Script Executions log for errors\n' +
+              '2. That you created a NEW VERSION and redeployed\n' +
+              '3. The sheet name matches ("Expense" or "Income")\n' +
+              '4. Your Google Sheet is accessible'
+          };
         }
       } catch (verifyError) {
-        // Can't verify, but assume it worked
-        return { success: true, message: 'Record sent to Google Sheets (verification failed, please check manually)' };
+        console.error('Verification error:', verifyError);
+        return { 
+          success: false, 
+          error: 'Record sent but verification failed: ' + verifyError.message + 
+            '\n\nPlease check your Google Sheet manually to see if the record was added.' 
+        };
       }
     }
 
